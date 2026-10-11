@@ -42,7 +42,7 @@ if __name__=='__main__':
     log('4/5 cores and answers'); st=analyse.core_stats(teams)
     ans=analyse.Answers(R.astype(float),cand_list,meta_list,st['use'],cfg.get('anti_meta_net_cutoff',-0.2))
     pickle.dump(dict(teams=teams,usage=usage,main=main,variants=variants,cands=cands,meta_list=meta_list,cand_list=cand_list,st=st),open(os.path.join(OUT,'state.pkl'),'wb'))
-    log('5/5 website'); n=export_site.export(os.path.join(HERE,'site','data.js'),teams,main,variants,cands,cand_list,meta_list,R,st,ans.net,gbl=(gbl,RG,order[:400]))
+    log('5/5 website'); n=export_site.export(os.path.join(HERE,'site','data.js'),teams,main,variants,cands,cand_list,meta_list,R,st,ans.net,gbl=(gbl,RG,order))
     import importlib.util
     spec=importlib.util.spec_from_file_location('i18n_src',os.path.join(HERE,'site','i18n_src.py')); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
     I={'es':{},'ja':{}}

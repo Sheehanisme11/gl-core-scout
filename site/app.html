@@ -405,6 +405,7 @@ dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
   .ivo{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px 3px 4px;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink)}.ivo:hover{border-color:var(--accent)}
   .ivo .badge{width:22px;height:22px;font-size:9px}
   .ivdp td{vertical-align:middle;font-size:13px}
+  .pltbl td{vertical-align:middle;font-size:13px}.pltbl code{font-family:var(--mono);font-size:12px;color:var(--muted)}
   /* battle matrix */
   .mxgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
   .mxg{display:grid;gap:10px;align-content:start}
@@ -624,6 +625,7 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
     <button role="tab" data-v="matrix" id="t-matrix">Battle matrix</button>
     <button role="tab" data-v="sandbox" id="t-sandbox">Battle sandbox</button>
     <button role="tab" data-v="ivs" id="t-ivs">Best IVs</button>
+    <button role="tab" data-v="plist" id="t-plist">Pokémon list</button>
     <button role="tab" data-v="types" id="t-types">Type quiz</button>
     <button role="tab" data-v="whowins" id="t-whowins">Who wins?</button>
     <button role="tab" data-v="counts" id="t-counts">Move counts</button>
@@ -778,6 +780,11 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
   <p class="lede">Best IVs: search a Pokémon to rank its IV spreads by how they actually battle against the regional meta, not just by stat product. You get the top 200 with CP, stats, stat product, average rating and wins, the matchups each spread flips compared with PvPoke's default IVs, and which matchups your IVs can never change. Ultra League shows stat product ranks.</p>
   <div id="ivIn"></div>
   <div id="ivOut" style="display:grid;gap:16px;margin-top:16px"></div>
+</section>
+
+<section class="view" id="v-plist" hidden>
+  <p class="lede">Pokémon list: every Pokémon in the site's data with its PvPoke id, typing, moveset and default IVs. Filter it, tick the ones you want, then download it for Excel, copy it as a PvPoke import list (it pastes straight into PvPoke's custom groups), or send it to the battle matrix.</p>
+  <div class="card" id="plIn"></div>
 </section>
 
 <section class="view" id="v-types" hidden>

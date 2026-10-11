@@ -1578,8 +1578,58 @@ IVEL.addEventListener('click',e=>{const b=e.target.closest('button,tr[data-ivrow
   if(d.ivmx){const k=+d.ivmx,x=IVRES.R.find(r=>ivKey(r.t)===k),Rz=IVRES,sh=Rz.sh==='avg'?1:+Rz.sh;
     MX.A=[{sid:Rz.sid,f:Rz.f,c:Rz.c.slice(),iv:[x.t.a,x.t.d,x.t.s],lv:null}];MX.B=Rz.O.slice(0,MXMAX).map(o=>({sid:o.sid,f:o.f,c:o.c.slice(),iv:null,lv:null}));MX.sa=sh;MX.sb=sh;MX.cap=Rz.cap;MX.opt=null;mxSave();go('matrix');window.scrollTo({top:0});startRun();return;}});
 
-const VIEWS=['home','cores','trends','teams','answers','build','lab','team','preview','gbl','matrix','sandbox','ivs','types','whowins','counts','about'];
-const GROUPS={home:['home'],meta:['cores','trends','teams','answers'],build:['build','lab','team','preview'],battle:['gbl'],sim:['matrix','sandbox','ivs'],learn:['types','whowins','counts','about']};
+// ---------- POKÉMON LIST: every Pokémon with PvPoke ids, typing and movesets, for Excel, PvPoke and the matrix
+const PVDEX={};if(typeof PVGM!=='undefined')PVGM.pokemon.forEach(p=>{PVDEX[p.speciesId]=p.dex;});
+const PVRANK={};if(typeof GBL!=='undefined')GBL.rank.forEach((c,i)=>{const sid=Cx[c].sid;if(!(sid in PVRANK))PVRANK[sid]=i+1;});
+const USAGE={};Mx.forEach(m=>{USAGE[m.sid]=(USAGE[m.sid]||0)+m.u;});
+let PL={q:'',type:'',form:'all',src:'all',mv:'pv',sort:'rank',show:200,sel:new Set()};
+function plRows(){const seen=new Set(),rows=[];for(const n of Object.keys(DATA.names)){const sid=DATA.names[n];if(!SP[sid]||seen.has(sid))continue;seen.add(sid);
+    const m=defMoves(sid,PL.mv==='reg'?'reg':'pv');rows.push({sid,n:SP[sid].n,dex:PVDEX[sid]||'',types:typesOf(sid),f:m.f,c:m.c.slice(0,2),u:USAGE[sid]||0,rank:PVRANK[sid]||null,iv:SP[sid].iv});}
+  return rows;}
+function plFiltered(){const q=PL.q.trim().toLowerCase();let R=plRows().filter(r=>{if(q&&!r.n.toLowerCase().includes(q)&&!dn(r.n).toLowerCase().includes(q)&&!r.sid.includes(q))return false;
+    if(PL.type&&!r.types.includes(PL.type))return false;const sh=/\(Shadow\)/.test(r.n);if(PL.form==='shadow'&&!sh)return false;if(PL.form==='regular'&&sh)return false;
+    if(PL.src==='reg'&&!r.u)return false;if(PL.src==='pv100'&&!(r.rank&&r.rank<=100))return false;if(PL.src==='pv300'&&!(r.rank&&r.rank<=300))return false;if(PL.src==='sel'&&!PL.sel.has(r.sid))return false;return true;});
+  const k=PL.sort;R.sort((a,b)=>k==='name'?dn(a.n).localeCompare(dn(b.n)):k==='dex'?(a.dex||9999)-(b.dex||9999)||a.n.localeCompare(b.n):k==='use'?b.u-a.u||(a.rank||9999)-(b.rank||9999):(a.rank||9999)-(b.rank||9999)||b.u-a.u);
+  return R;}
+const plLine=r=>`${r.sid},${r.f},${r.c[0]||'none'},${r.c[1]||'none'}`;
+function plCSV(R){const out=[['Pokemon','PvPoke id','Dex','Type 1','Type 2','Fast move','Charged move 1','Charged move 2','Regional teams','PvPoke GL rank','Default IVs','Level','CP','PvPoke import line']];
+  R.forEach(r=>{const v=r.iv;out.push([r.n,r.sid,r.dex,r.types[0],r.types[1]||'',MV[r.f]?MV[r.f].name:r.f,r.c[0]&&MV[r.c[0]]?MV[r.c[0]].name:'',r.c[1]&&MV[r.c[1]]?MV[r.c[1]].name:'',r.u,r.rank||'',`${v[1]}/${v[2]}/${v[3]}`,v[0],cpOf(r.sid,v[0],v[1],v[2],v[3]),plLine(r)]);});
+  return out.map(r=>r.map(csvCell).join(',')).join('\r\n');}
+function renderPL(){const el=$('plIn');if(!el)return;const R=plFiltered(),shown=R.slice(0,PL.show),nsel=PL.sel.size;
+  const types=TYPES.slice().sort((a,b)=>tn(a).localeCompare(tn(b)));
+  el.innerHTML=`<div class="controls mxfl"><label class="fld">${T('Find')} <input type="search" id="plQ" value="${esc(PL.q)}" placeholder="${esc(T('Name or PvPoke id'))}"></label>
+    <label class="fld">${T('Type')} <select id="plType"><option value="">${T('All types')}</option>${types.map(t=>`<option value="${t}"${PL.type===t?' selected':''}>${esc(tn(t))}</option>`).join('')}</select></label>
+    <label class="fld">${T('Form')} <select id="plForm"><option value="all"${PL.form==='all'?' selected':''}>${T('All')}</option><option value="shadow"${PL.form==='shadow'?' selected':''}>${T('Shadow only')}</option><option value="regular"${PL.form==='regular'?' selected':''}>${T('Not Shadow')}</option></select></label>
+    <label class="fld">${T('Show')} <select id="plSrc"><option value="all"${PL.src==='all'?' selected':''}>${T('Every Pokémon')}</option><option value="reg"${PL.src==='reg'?' selected':''}>${T('Used at the regionals')}</option><option value="pv100"${PL.src==='pv100'?' selected':''}>${T('PvPoke top 100')}</option><option value="pv300"${PL.src==='pv300'?' selected':''}>${T('PvPoke top 300')}</option><option value="sel"${PL.src==='sel'?' selected':''}>${T('Ticked only ({n})',{n:nsel})}</option></select></label>
+    <label class="fld">${T('Moveset')} <select id="plMv"><option value="pv"${PL.mv==='pv'?' selected':''}>${T('PvPoke recommended')}</option><option value="reg"${PL.mv==='reg'?' selected':''}>${T('Most used at the regionals')}</option></select></label>
+    <label class="fld">${T('Sort')} <select id="plSort"><option value="rank"${PL.sort==='rank'?' selected':''}>${T('PvPoke rank')}</option><option value="use"${PL.sort==='use'?' selected':''}>${T('Regional teams')}</option><option value="name"${PL.sort==='name'?' selected':''}>${T('Name')}</option><option value="dex"${PL.sort==='dex'?' selected':''}>${T('Pokédex number')}</option></select></label></div>
+   <div class="controls"><span class="num mxshown">${T('{a} Pokémon · {b} ticked',{a:R.length,b:nsel})}</span>
+    <button class="btn" id="plDl">${T('Download for Excel')}</button><button class="btn ghost" id="plCopy">${T('Copy PvPoke import list')}</button><button class="btn ghost" id="plNames">${T('Copy names')}</button>
+    <button class="btn ghost" data-plto="A">${T('Send to matrix Group A')}</button><button class="btn ghost" data-plto="B">${T('Send to matrix Group B')}</button>
+    <button class="link" id="plTickAll">${T('Tick all shown')}</button>${nsel?`<button class="link" id="plUntick">${T('Untick all')}</button>`:''}</div>
+   <p class="lede" style="font-size:12px">${T('Buttons use the ticked Pokémon if any are ticked, otherwise everything in the list. The PvPoke import list pastes into PvPoke\'s custom group Import, or into this site\'s matrix groups.')}</p>
+   <div class="tblwrap"><table class="vt pltbl"><thead><tr><th></th><th>${T('Pokémon')}</th><th>${T('PvPoke id')}</th><th class="r">${T('Dex')}</th><th>${T('Moveset')}</th><th class="r">${T('Regional teams')}</th><th class="r">${T('PvPoke rank')}</th><th>${T('Default IVs')}</th></tr></thead><tbody>
+   ${shown.map(r=>`<tr><td><input type="checkbox" data-pltick="${r.sid}"${PL.sel.has(r.sid)?' checked':''} aria-label="${esc(dn(r.n))}"></td><td>${monTag(r.n,r.sid)} ${typeBars(r.sid)}</td><td class="num"><code>${esc(r.sid)}</code></td><td class="r num">${r.dex}</td><td><small>${[r.f,...r.c].map(mvTag).join(' · ')}</small></td><td class="r num">${r.u||''}</td><td class="r num">${r.rank?'#'+r.rank:''}</td><td class="num"><small>${r.iv[1]}/${r.iv[2]}/${r.iv[3]} · ${T('Lvl')} ${r.iv[0]}</small></td></tr>`).join('')}</tbody></table></div>
+   ${R.length>PL.show?`<div class="controls"><button class="btn ghost" id="plMore">${T('Show {n} more',{n:Math.min(200,R.length-PL.show)})}</button></div>`:''}`;}
+function plChosen(){const R=plFiltered();return PL.sel.size?R.filter(r=>PL.sel.has(r.sid)).concat(plRows().filter(r=>PL.sel.has(r.sid)&&!R.some(x=>x.sid===r.sid))):R;}
+function plCopy(txt){(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast(T('Copied')),()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast(T('Copied'));}catch(e){}ta.remove();});}
+const PLEL=$('v-plist');
+PLEL.addEventListener('input',e=>{if(e.target.id==='plQ'){PL.q=e.target.value;PL.show=200;const pos=e.target.selectionStart;renderPL();const q=$('plQ');q.focus();q.setSelectionRange(pos,pos);}});
+PLEL.addEventListener('change',e=>{const t=e.target,map={plType:'type',plForm:'form',plSrc:'src',plMv:'mv',plSort:'sort'};
+  if(map[t.id]){PL[map[t.id]]=t.value;PL.show=200;renderPL();return;}
+  if(t.dataset.pltick){if(t.checked)PL.sel.add(t.dataset.pltick);else PL.sel.delete(t.dataset.pltick);const s=PLEL.querySelector('.mxshown');if(s)s.textContent=T('{a} Pokémon · {b} ticked',{a:plFiltered().length,b:PL.sel.size});}});
+PLEL.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.id==='plMore'){PL.show+=200;renderPL();return;}
+  if(b.id==='plTickAll'){plFiltered().slice(0,PL.show).forEach(r=>PL.sel.add(r.sid));renderPL();return;}
+  if(b.id==='plUntick'){PL.sel.clear();renderPL();return;}
+  if(b.id==='plDl'){download('pokemon-list.csv',plCSV(plChosen()));return;}
+  if(b.id==='plCopy'){plCopy(plChosen().map(plLine).join('\n'));return;}
+  if(b.id==='plNames'){plCopy(plChosen().map(r=>dn(r.n)).join('\n'));return;}
+  if(b.dataset.plto){const g=b.dataset.plto,L=plChosen();if(!L.length){toast(T('That list is empty.'));return;}if(L.length>MXMAX)toast(T('Groups hold up to {n}; {k} were left out.',{n:MXMAX,k:L.length-MXMAX}));
+    MX[g]=L.slice(0,MXMAX).map(r=>mkEntry(r.sid,{f:r.f,c:r.c}));MX.opt=null;mxSave();go('matrix');window.scrollTo({top:0});toast(T('Group {g}: {n} Pokémon',{g,n:MX[g].length}));return;}});
+
+const VIEWS=['home','cores','trends','teams','answers','build','lab','team','preview','gbl','matrix','sandbox','ivs','plist','types','whowins','counts','about'];
+const GROUPS={home:['home'],meta:['cores','trends','teams','answers'],build:['build','lab','team','preview'],battle:['gbl'],sim:['matrix','sandbox','ivs','plist'],learn:['types','whowins','counts','about']};
 const groupOf=v=>Object.keys(GROUPS).find(g=>GROUPS[g].includes(v));
 const lastView={};
 let cur='cores';
@@ -1593,7 +1643,7 @@ function go(v){if(!VIEWS.includes(v))v='home';cur=v;const g=groupOf(v);lastView[
 function keepOpen(fn){const open=[...document.querySelectorAll('section.view:not([hidden]) button.head[aria-expanded="true"]')].map(b=>b.dataset.core);fn();
   for(const k of open){const b=document.querySelector(`section.view:not([hidden]) button.head[data-core="${k}"]`);if(b)b.click();}}
 function refresh(){const sb=document.querySelector('.setbar');const na=cur==='trends'||cur==='about';sb.classList.toggle('na',na);$('setNote').textContent=na?T("Shields and close margin don't affect this tab."):cur==='matrix'?T('The matrix sets its own shields below; the close margin here still colours the results.'):cur==='sandbox'||cur==='ivs'?T('This page sets its own shields below; the close margin here still colours the results.'):'';
-  if(cur==='cores'||cur==='build'){keepOpen(()=>{if(cur==='cores')renderCores();else renderBuild();});return;}if(cur==='cores')renderCores();if(cur==='build')renderBuild();if(cur==='answers')renderAnswers();if(cur==='team'){teamSlots.render();renderTeam();}if(cur==='lab')renderLab();if(cur==='trends')renderTrends();if(cur==='teams')renderTD();if(cur==='gbl'){trioSlots.render();renderG3();}if(cur==='home')renderHome();if(cur==='types')renderTQ();if(cur==='whowins')renderWW();if(cur==='counts')renderMC();if(cur==='matrix')renderMatrix();if(cur==='sandbox')renderSandbox();if(cur==='ivs')renderIVs();setSummary();if(cur==='preview'){pvSlots.render();pvSummary();renderPreviewInputs();renderPreview();}}
+  if(cur==='cores'||cur==='build'){keepOpen(()=>{if(cur==='cores')renderCores();else renderBuild();});return;}if(cur==='cores')renderCores();if(cur==='build')renderBuild();if(cur==='answers')renderAnswers();if(cur==='team'){teamSlots.render();renderTeam();}if(cur==='lab')renderLab();if(cur==='trends')renderTrends();if(cur==='teams')renderTD();if(cur==='gbl'){trioSlots.render();renderG3();}if(cur==='home')renderHome();if(cur==='types')renderTQ();if(cur==='whowins')renderWW();if(cur==='counts')renderMC();if(cur==='matrix')renderMatrix();if(cur==='sandbox')renderSandbox();if(cur==='ivs')renderIVs();if(cur==='plist')renderPL();setSummary();if(cur==='preview'){pvSlots.render();pvSummary();renderPreviewInputs();renderPreview();}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
 document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.g;go(lastView[g]||GROUPS[g][0]);window.scrollTo({top:0});}));
 document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){const v=b.dataset.go;if(v==='gbl')G3S='sug';go(v);window.scrollTo({top:0});}});

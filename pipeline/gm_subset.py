@@ -7,7 +7,7 @@ def subset(sids,extra_moves=()):
     for sid in list(sids):
         fc=P[sid].get('formChange')
         if fc and fc.get('trigger')=='activate_charged' and fc.get('alternativeFormId') in P: sids.add(fc['alternativeFormId'])
-    for sid in sids:
+    for sid in sorted(sids):  # sorted so rebuilds are byte-for-byte reproducible
         p=P[sid]; iv=p['defaultIVs']['cp1500']
         sh='shadow' in (p.get('tags') or []) or sid.endswith('_shadow')
         f=[m for m in p['fastMoves'] if m in MV]; c=[m for m in p['chargedMoves']+[e for e in p.get('eliteMoves',[]) if e not in p['chargedMoves']] if m in MV]

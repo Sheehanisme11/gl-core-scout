@@ -632,11 +632,13 @@ function renderPreview(){const out=$('pvOut');const mine=team.filter(Boolean),op
    <div class="cols"><div class="panel"><h3>${T('Lead')} · ${nm(role.L)}</h3><p class="why">${T('At 2 shields it beats <b>{a} of their {b}</b> possible leads',{a:leadW.length,b:opp.length})}${leadW.length?': '+leadW.map(on).join(', '):''}.${leadL.length?' '+T('Loses to {list}.',{list:leadL.map(on).join(', ')}):''}</p></div>
    <div class="panel"><h3>${T('Safe swap')} · ${nm(role.S)}</h3><p class="why">${leadL.length?T('Comes in when they lead with {list}.',{list:leadL.map(on).join(' / ')})+' '+(swapFix.length?T('At 1 shield it beats {list}.',{list:swapFix.map(on).join(', ')}):T('At 1 shield it does not clearly beat them.'))+(swapNo.length?' '+T('Still struggles with {list}.',{list:swapNo.map(on).join(', ')}):''):T('Your lead has no losing lead matchup here, so this slot is free to cover their back line.')}</p></div>
    <div class="panel"><h3>${T('Closer')} · ${nm(role.C)}</h3><p class="why">${T('Against their most dangerous three for this trio ({list}), it wins {k} of 3 with no shields',{list:best.wT.map(on).join(', '),k:closerW.length})}${closerW.length?': '+closerW.map(on).join(', '):''}.</p></div></div>
+   <p style="margin-top:10px"><button class="btn" id="pvT3">${T('Play it out in 3v3')}</button> <span class="mxsub2">${T('Your three against their most dangerous three.')}</span></p>
    <p class="lede" style="font-size:13px;margin-top:8px">${T('Picked by worst case: the trio that holds up best even when they bring their best counter-trio. Lead is judged at 2 shields, safe swap at 1, closer at 0.')}</p></div>`;
   const mkKey=(lab,arr)=>`<div class="mkey"><h4>${lab}</h4>${arr.map(s=>`<div class="mkr"><span class="mkn"><b>${esc(dn(s.name))}</b>${typeBars(s.sid)}</span><span class="mkm">${[s.f,...s.c].filter(Boolean).map(mvTag).join('<span class="sep">·</span>')}</span></div>`).join('')}</div>`;
   h+=`<div class="card grid chartbox"><h3 style="font-size:18px;margin-bottom:4px">Your six vs their six</h3><p class="lede" style="font-size:13px">${T('Their actual registered moves. At {sc}.',{sc:scenLabel()})}</p>${heatmap({id:'pvh',typed:true,corner:T('You \\ Them'),rows:mine.map(s=>({name:s.name,sid:s.sid})),cols:opp.map(o=>({name:o.name,sid:o.sid})),val:(i,j)=>rv(i,j),r3:(i,j)=>R[i][j],pair:(i,j)=>`${dn(mine[i].name)} vs ${dn(opp[j].name)}`})}<div class="keys">${mkKey(T('Your six'),mine)}${mkKey(T('Their six'),opp)}</div></div>`;
   h+=`<div class="card"><h3 style="font-size:18px;margin-bottom:6px">Every trio you could bring</h3><div class="tblwrap" style="border:0"><table class="vt"><thead><tr><th>#</th><th>Trio</th><th class="r">Worst case</th><th class="r">Average</th><th>Their best answer</th></tr></thead><tbody>${trios.map((t,k)=>`<tr><td class="num">${k+1}</td><td>${t.Y.map(nm).join(' · ')}</td><td class="r num">${Math.round(t.worst)}</td><td class="r num">${Math.round(t.avgq)}</td><td style="font-size:13px">${t.wT.map(on).join(' · ')}</td></tr>`).join('')}</tbody></table></div><p class="lede" style="font-size:13px">${T('Score 500 = even trade. Above 500 your three answer theirs better than they answer yours.')}</p></div>`;
-  out.innerHTML=h;},20);}
+  out.innerHTML=h;PV3=[[role.L,role.S,role.C].map(i=>mine[i]),best.wT.map(j=>opp[j])];},20);}
+let PV3=null;$('pvOut').addEventListener('click',e=>{if(e.target.closest('#pvT3')&&PV3)openT3(PV3[0],PV3[1]);});
 seg(['om-real','om-custom'],id=>{oppMode=id.slice(3);saveOpp();renderPreviewInputs();renderPreview();});
 $('opTeamQ').addEventListener('change',e=>{const v=e.target.value.trim();const k=TEAMS.findIndex(t=>teamLabel(t)===v);if(k>=0){oppIdx=k;saveOpp();renderPreview();}});
 $('opRandom').addEventListener('click',()=>{const d2=TEAMS.map((t,i)=>t[3]?i:-1).filter(i=>i>=0);oppIdx=d2[Math.floor(Math.random()*d2.length)];saveOpp();renderPreviewInputs();renderPreview();});
@@ -1669,13 +1671,94 @@ IVEL.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)retur
 const GUIDES={matrix:['Pick a ready-made list for each group (or paste a PvPoke list), then press Run.','Tap any cell for every shield combination, or open it in the sandbox.','Use "Best IVs for these shields" to give each Pokémon its strongest spread against the other group.','Search, filter and sort the results tables, and download everything for Excel.'],
   sandbox:['Pick two Pokémon, their moves and IVs; change shields, starting HP, energy and stat stages.','The result, timeline and turn-by-turn log update as you change anything.','"Analyse every IV" tests all 4,096 spreads for both sides: what flips the result, and whether it is a win or loss whatever the IVs.'],
   ivs:['Search a Pokémon and press "Find the best IVs".','The table ranks its top 200 spreads by results against the opponents you pick; tap a row for the matchups it flips.','Compare any two spreads below the table, and see the breakpoints that matter.'],
+  t3:['Fill both trios (or use your team, or a random Day 2 team for them) and pick each side\'s plan.','The result plays the whole 3v3 out with PvPoke\'s battle engine, one exchange at a time.','The lead grid shows how every lead pairing goes, so you can see which lead is safest.'],
   plist:['Filter the list and tick the Pokémon you want (or use the whole list).','Download it for Excel, copy it as a PvPoke import list, or send it to the battle matrix.']};
 function guide(v){const el=$('guide-'+v);if(!el)return;let seen=false;try{seen=!!localStorage.getItem('gl_guide_'+v);}catch(e){}
   el.innerHTML=seen?'':`<div class="guide"><b>${T('How to use this page')}</b><ol>${GUIDES[v].map(x=>`<li>${esc(T(x))}</li>`).join('')}</ol><button class="link" data-guidex="${v}">${T('Got it')}</button></div>`;}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-guidex]');if(!b)return;try{localStorage.setItem('gl_guide_'+b.dataset.guidex,'1');}catch(err){}guide(b.dataset.guidex);});
 
-const VIEWS=['home','cores','trends','teams','answers','build','lab','team','preview','gbl','matrix','sandbox','ivs','plist','types','whowins','counts','about'];
-const GROUPS={home:['home'],meta:['cores','trends','teams','answers'],build:['build','lab','team','preview'],battle:['gbl'],sim:['matrix','sandbox','ivs','plist'],learn:['types','whowins','counts','about']};
+// ---------- 3v3 BATTLE: two trios, played exchange by exchange with PvPoke's engine.
+// Each exchange is a PvPoke 1v1 battle from the current HP, energy and remaining shields until one side faints;
+// the survivor keeps its HP and energy, the team's remaining shields carry over, and the next Pokémon comes in.
+const T3DEF={lead:'swap',next:'best',sh:'need',shields:2};
+let T3={A:[null,null,null],B:[null,null,null],S:{A:Object.assign({},T3DEF),B:Object.assign({},T3DEF)},res:null};
+try{const o=JSON.parse(localStorage.getItem('gl_t3')||'null');if(o){T3.A=(o.A||[]).map(x=>x?mkSlot(x):null).concat([null,null,null]).slice(0,3);T3.B=(o.B||[]).map(x=>x?mkSlot(x):null).concat([null,null,null]).slice(0,3);if(o.S)T3.S={A:Object.assign({},T3DEF,o.S.A),B:Object.assign({},T3DEF,o.S.B)};}}catch(e){}
+if(!T3.A.some(Boolean)){const t=team.filter(Boolean).slice(0,3);T3.A=[0,1,2].map(k=>t[k]?mkSlot({name:t[k].name,f:t[k].f,c:t[k].c}):null);}
+if(!T3.B.some(Boolean)||!T3.A.some(Boolean)){const top=Mx.map((m,i)=>i).sort((a,b)=>Mx[b].u-Mx[a].u);if(!T3.B.some(Boolean))T3.B=top.slice(0,3).map(i=>mkSlot({name:Mx[i].n}));if(!T3.A.some(Boolean))T3.A=top.slice(3,6).map(i=>mkSlot({name:Mx[i].n}));}
+function t3save(){try{localStorage.setItem('gl_t3',JSON.stringify({A:T3.A.map(s=>s?{name:s.name,f:s.f,c:s.c}:null),B:T3.B.map(s=>s?{name:s.name,f:s.f,c:s.c}:null),S:T3.S}));}catch(e){}}
+const t3A=Slots({el:$('t3A'),prefix:'t3a',max:3,fixed:true,compact:true,list:()=>T3.A,save:t3save,onChange:()=>{t3A.render();T3.res=null;renderT3();}});
+const t3B=Slots({el:$('t3B'),prefix:'t3b',max:3,fixed:true,compact:true,list:()=>T3.B,save:t3save,onChange:()=>{t3B.render();T3.res=null;renderT3();}});
+const t3spec=s=>[s.sid,s.f,s.c.filter(Boolean),SP[s.sid].iv.slice()];
+// play one 3v3. lead = [indexA,indexB] or null (use slot 1). strat per side: {lead:'swap'|'stay', next:'best'|'order', sh:'need'|'keep1'|'keep2', shields}
+function t3play(TA,TB,SA,SB,lead){const mk=T=>T.map((s,k)=>{const b=bld(s.sid,s.f,s.c);return {k,s,spec:t3spec(s),hp:b.hp,max:b.hp,en:0,out:false};});
+  const P=[mk(TA),mk(TB)],S=[SA,SB],sh=[SA.shields,SB.shields],cur=lead?lead.slice():[0,0],ev=[];let t=0;
+  const keep=side=>{const left=P[side].filter(x=>!x.out).length;const k=S[side].sh==='keep2'?2:S[side].sh==='keep1'?1:0;return left>1?Math.min(k,sh[side]):0;};
+  const quick=(side,me,op)=>{const a=side?[op,me]:[me,op],av=[sh[0]-keep(0),sh[1]-keep(1)];const r=PVE.run(a[0].spec,a[1].spec,{sh:av,hp:[a[0].hp,a[1].hp],en:[a[0].en,a[1].en]});return r.ratings[side];};
+  const pickNext=(side,opp)=>{const left=P[side].filter(x=>!x.out);if(!left.length)return -1;if(S[side].next==='order'||left.length===1||!opp)return left[0].k;
+    let best=null;for(const x of left){const r=quick(side,x,opp);if(!best||r>best.r)best={k:x.k,r};}return best.k;};
+  // opening: a side set to swap leaves a losing lead for its best answer to the other lead
+  const sw=[null,null];for(const side of [0,1]){if(S[side].lead!=='swap')continue;const me=P[side][cur[side]],op=P[1-side][cur[1-side]];const r0=quick(side,me,op);
+    if(r0>=500)continue;let best=null;for(const x of P[side]){if(x.k===cur[side])continue;const r=quick(side,x,op);if(!best||r>best.r)best={k:x.k,r};}
+    if(best&&best.r>500&&best.r>r0+50)sw[side]={from:cur[side],to:best.k,r0,r1:best.r};}
+  for(const side of [0,1])if(sw[side]){cur[side]=sw[side].to;ev.push({type:'swap',side,from:sw[side].from,to:sw[side].to,r0:sw[side].r0,r1:sw[side].r1,t:0});}
+  let guard=0;
+  while(guard++<12){const a=P[0][cur[0]],b=P[1][cur[1]];const av=[sh[0]-keep(0),sh[1]-keep(1)];
+    const st={hp:[a.hp,b.hp],en:[a.en,b.en],sh:[sh[0],sh[1]]};
+    const R=PVE.run(a.spec,b.spec,{sh:av,hp:[a.hp,b.hp],en:[a.en,b.en],log:true});
+    const used=[av[0]-R.sh[0],av[1]-R.sh[1]];sh[0]-=used[0];sh[1]-=used[1];a.hp=R.hp[0];b.hp=R.hp[1];a.en=R.en[0];b.en=R.en[1];t+=R.turns;
+    ev.push({type:'ex',a:a.k,b:b.k,st,end:{hp:[a.hp,b.hp],en:[a.en,b.en],sh:[sh[0],sh[1]]},used,turns:R.turns,t,log:R.log});
+    if(a.hp<=0)a.out=true;if(b.hp<=0)b.out=true;
+    if(!a.out&&!b.out)break; // time ran out in this exchange
+    const na=a.out?pickNext(0,b.out?null:b):cur[0],nb=b.out?pickNext(1,a.out?null:a):cur[1];
+    if(a.out){if(na<0)break;cur[0]=na;ev.push({type:'in',side:0,k:na,t});}
+    if(b.out){if(nb<0)break;cur[1]=nb;ev.push({type:'in',side:1,k:nb,t});}
+    if(t>=480)break;}
+  const left=P.map(T=>T.filter(x=>!x.out)),frac=P.map(T=>T.reduce((s,x)=>s+(x.out?0:x.hp/x.max),0));
+  const winner=left[0].length&&!left[1].length?0:left[1].length&&!left[0].length?1:frac[0]>frac[1]?0:frac[1]>frac[0]?1:-1;
+  return {P,ev,winner,left,frac,sh,t,score:Math.round(500+500*(frac[0]-frac[1])/3)};}
+function t3stratHTML(g){const S=T3.S[g];const sel=(k,opts)=>`<select data-t3s="${g}:${k}">${opts.map(([v,l])=>`<option value="${v}"${String(S[k])===String(v)?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  return `<div class="t3strat"><label class="fld">${T('Shields')} ${sel('shields',[[0,'0'],[1,'1'],[2,'2']])}</label>
+   <label class="fld">${T('Lead')} ${sel('lead',[['swap',T('Swap out a losing lead')],['stay',T('Lead stays in')]])}</label>
+   <label class="fld">${T('After a faint')} ${sel('next',[['best',T('Best answer comes in')],['order',T('Team order')]])}</label>
+   <label class="fld">${T('Shield plan')} ${sel('sh',[['need',T('Use as needed')],['keep1',T('Save 1 for the last Pokémon')],['keep2',T('Save 2 for the last Pokémon')]])}</label></div>`;}
+function renderT3(){const el=$('t3Out');if(!el)return;$('t3SA').innerHTML=t3stratHTML('A');$('t3SB').innerHTML=t3stratHTML('B');
+  const A=T3.A.filter(Boolean),B=T3.B.filter(Boolean);if(A.length<3||B.length<3){el.innerHTML=`<p class="empty">${T('Fill all three slots on both sides.')}</p>`;return;}
+  if(!HAS_PVE){el.innerHTML='';return;}
+  const R=t3play(A,B,T3.S.A,T3.S.B,null);T3.res=R;const nm=(side,k)=>esc(dn((side?B:A)[k].name)),tag=(side,k)=>monTag((side?B:A)[k].name,(side?B:A)[k].sid);
+  const won=R.winner===0?T('Your team wins'):R.winner===1?T('Their team wins'):T('Draw');
+  const teamLeft=side=>R.P[side].map(x=>`<div class="t3m${x.out?' out':''}">${badge(x.s.name,x.s.sid)}<span>${esc(dn(x.s.name))}</span><span class="sbbar"><i class="left" style="width:${(100*Math.max(0,x.hp)/x.max).toFixed(1)}%"></i></span><span class="num">${x.out?T('fainted'):Math.max(0,x.hp)+' '+T('HP')}</span></div>`).join('');
+  let h=`<div class="card"><div class="sbverdict ${R.winner===0?'w0':R.winner===1?'w1':'tie'}"><b>${won}</b><span class="num">${T('{a} left vs {b} left',{a:R.left[0].length,b:R.left[1].length})} · ${T('shields left {a} / {b}',{a:R.sh[0],b:R.sh[1]})} · ${(R.t*0.5).toFixed(1)}s</span></div>
+   <div class="cols"><div><h4>${T('Your team')}</h4>${teamLeft(0)}</div><div><h4>${T('Their team')}</h4>${teamLeft(1)}</div></div>
+   <h4 class="ivh">${T('Play by play')}</h4><ol class="t3pbp">`;
+  for(const e of R.ev){if(e.type==='swap'){h+=`<li class="t3sw">${e.side?T('They swap {a} out for {b} ({r0} → {r1} in this matchup).',{a:nm(1,e.from),b:nm(1,e.to),r0:e.r0,r1:e.r1}):T('You swap {a} out for {b} ({r0} → {r1} in this matchup).',{a:nm(0,e.from),b:nm(0,e.to),r0:e.r0,r1:e.r1})}</li>`;continue;}
+    if(e.type==='in'){h+=`<li class="t3in">${e.side?T('{p} comes in for them.',{p:nm(1,e.k)}):T('{p} comes in for you.',{p:nm(0,e.k)})}</li>`;continue;}
+    const ch=e.log.filter(x=>x.k==='charged').map(x=>`${esc(dn((x.i?B[e.b]:A[e.a]).name))} ${mvTag(x.m)}${x.sd?` <span class="tag">${T('shielded')}</span>`:` <span class="num">${x.d}</span>`}`).join(' · ');
+    const fa=e.end.hp[0]<=0,fb=e.end.hp[1]<=0;
+    h+=`<li class="t3ex"><div><b>${tag(0,e.a)}</b> <span class="vs">vs</span> <b>${tag(1,e.b)}</b> <span class="mxsub2">${(e.t*0.5).toFixed(1)}s</span></div>
+     <div class="mxsub2">${T('Start')}: ${e.st.hp[0]} / ${e.st.hp[1]} ${T('HP')} · ${T('energy')} ${e.st.en[0]} / ${e.st.en[1]} · ${T('shields')} ${e.st.sh[0]} / ${e.st.sh[1]}</div>
+     ${ch?`<div class="t3ch">${ch}</div>`:''}
+     <div>${fa&&fb?T('Both faint.'):fa?T('{p} faints; {q} has {h} HP and {e} energy left.',{p:nm(0,e.a),q:nm(1,e.b),h:e.end.hp[1],e:e.end.en[1]}):fb?T('{p} faints; {q} has {h} HP and {e} energy left.',{p:nm(1,e.b),q:nm(0,e.a),h:e.end.hp[0],e:e.end.en[0]}):T('Time runs out.')}${e.used[0]||e.used[1]?` <span class="mxsub2">${T('Shields used: {a} / {b}',{a:e.used[0],b:e.used[1]})}</span>`:''}</div></li>`;}
+  h+=`</ol></div>`;
+  // every lead pairing (both leads stay in)
+  const SA=Object.assign({},T3.S.A,{lead:'stay'}),SB=Object.assign({},T3.S.B,{lead:'stay'});
+  const G=[0,1,2].map(i=>[0,1,2].map(j=>t3play(A,B,SA,SB,[i,j])));
+  const wins=[0,1,2].map(i=>G[i].filter(r=>r.winner===0).length),worst=[0,1,2].map(i=>Math.min(...G[i].map(r=>r.score)));
+  const bestLead=[0,1,2].sort((x,y)=>wins[y]-wins[x]||worst[y]-worst[x])[0];
+  h+=`<div class="card"><h3 style="font-size:18px;margin-bottom:4px">${T('Every lead matchup')}</h3><p class="lede" style="font-size:13px">${T('Each cell is the whole 3v3 with those two leads staying in, using the rest of each side\'s plan. Greener is better for you; the number is the share of your team\'s HP left against theirs.')}</p>
+   <div class="hmwrap"><table class="hm mxsh"><thead><tr><th class="hl"><small>${T('You ↓ · Them →')}</small></th>${B.map(b=>`<th class="hh">${badge(b.name,b.sid)}<span class="hn">${esc(shortName(b.name))}</span></th>`).join('')}<th class="hh hb">${T('Wins')}</th></tr></thead><tbody>
+   ${A.map((a,i)=>`<tr><th class="hl">${monTag(a.name,a.sid)}${i===bestLead?` <span class="tag ok">${T('best lead')}</span>`:''}</th>${G[i].map((r,j)=>{const c=heatCol(r.score);return `<td class="hc" style="background:${c.bg};color:${c.fg}" title="${esc(r.winner===0?T('Your team wins'):r.winner===1?T('Their team wins'):T('Draw'))}">${r.winner===0?'W':r.winner===1?'L':'T'}<small> ${r.score}</small></td>`;}).join('')}<td class="r num"><b>${wins[i]}</b>/3</td></tr>`).join('')}</tbody></table></div>
+   <p class="lede" style="font-size:12px">${T('How it works: each exchange is a PvPoke battle from the current HP, energy and remaining shields until one Pokémon faints. Survivors keep their HP and energy, shields carry over, and the next Pokémon comes in. Switching mid-exchange and fast-move alignment between exchanges are not modelled.')}</p></div>`;
+  el.innerHTML=h;}
+const T3EL=$('v-t3');
+T3EL.addEventListener('change',e=>{const d=e.target.dataset;if(d.t3s){const [g,k]=d.t3s.split(':');T3.S[g][k]=k==='shields'?+e.target.value:e.target.value;t3save();renderT3();}});
+T3EL.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.id==='t3Swap'){[T3.A,T3.B]=[T3.B,T3.A];[T3.S.A,T3.S.B]=[T3.S.B,T3.S.A];t3save();t3A.render();t3B.render();renderT3();return;}
+  if(b.id==='t3Mine'){const t=team.filter(Boolean).slice(0,3);T3.A=[0,1,2].map(k=>t[k]?mkSlot({name:t[k].name,f:t[k].f,c:t[k].c}):null);t3save();t3A.render();renderT3();return;}
+  if(b.id==='t3Rand'){const D=DATA.T.filter(t=>t[3]);const tm=D[Math.floor(Math.random()*D.length)];const mons=tm[4].filter(m=>m[1]&&SP[m[1]]).slice();for(let i=mons.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[mons[i],mons[j]]=[mons[j],mons[i]];}
+    T3.B=mons.slice(0,3).map(m=>mkSlot({name:m[0],f:m[2],c:m[3]}));t3save();t3B.render();renderT3();toast(T('Three from {p} ({e} #{n})',{p:tm[2],e:tm[0],n:tm[1]}));return;}});
+function openT3(A,B){T3.A=A.map(s=>mkSlot({name:s.name,f:s.f,c:s.c}));T3.B=B.map(s=>mkSlot({name:s.name,f:s.f,c:s.c}));t3save();go('t3');window.scrollTo({top:0});}
+const VIEWS=['home','cores','trends','teams','answers','build','lab','team','preview','gbl','matrix','sandbox','ivs','plist','t3','types','whowins','counts','about'];
+const GROUPS={home:['home'],meta:['cores','trends','teams','answers'],build:['build','lab','team','preview'],battle:['gbl'],sim:['matrix','sandbox','ivs','plist','t3'],learn:['types','whowins','counts','about']};
 const groupOf=v=>Object.keys(GROUPS).find(g=>GROUPS[g].includes(v));
 const lastView={};
 let cur='cores';
@@ -1689,7 +1772,7 @@ function go(v){if(!VIEWS.includes(v))v='home';cur=v;const g=groupOf(v);lastView[
 function keepOpen(fn){const open=[...document.querySelectorAll('section.view:not([hidden]) button.head[aria-expanded="true"]')].map(b=>b.dataset.core);fn();
   for(const k of open){const b=document.querySelector(`section.view:not([hidden]) button.head[data-core="${k}"]`);if(b)b.click();}}
 function refresh(){const sb=document.querySelector('.setbar');const na=cur==='trends'||cur==='about';sb.classList.toggle('na',na);$('setNote').textContent=na?T("Shields and close margin don't affect this tab."):cur==='matrix'?T('The matrix sets its own shields below; the close margin here still colours the results.'):cur==='sandbox'||cur==='ivs'?T('This page sets its own shields below; the close margin here still colours the results.'):'';
-  if(cur==='cores'||cur==='build'){keepOpen(()=>{if(cur==='cores')renderCores();else renderBuild();});return;}if(cur==='cores')renderCores();if(cur==='build')renderBuild();if(cur==='answers')renderAnswers();if(cur==='team'){teamSlots.render();renderTeam();}if(cur==='lab')renderLab();if(cur==='trends')renderTrends();if(cur==='teams')renderTD();if(cur==='gbl'){trioSlots.render();renderG3();}if(cur==='home')renderHome();if(cur==='types')renderTQ();if(cur==='whowins')renderWW();if(cur==='counts')renderMC();if(cur==='matrix')renderMatrix();if(cur==='sandbox')renderSandbox();if(cur==='ivs')renderIVs();if(cur==='plist')renderPL();if(GUIDES[cur])guide(cur);setSummary();if(cur==='preview'){pvSlots.render();pvSummary();renderPreviewInputs();renderPreview();}}
+  if(cur==='cores'||cur==='build'){keepOpen(()=>{if(cur==='cores')renderCores();else renderBuild();});return;}if(cur==='cores')renderCores();if(cur==='build')renderBuild();if(cur==='answers')renderAnswers();if(cur==='team'){teamSlots.render();renderTeam();}if(cur==='lab')renderLab();if(cur==='trends')renderTrends();if(cur==='teams')renderTD();if(cur==='gbl'){trioSlots.render();renderG3();}if(cur==='home')renderHome();if(cur==='types')renderTQ();if(cur==='whowins')renderWW();if(cur==='counts')renderMC();if(cur==='matrix')renderMatrix();if(cur==='sandbox')renderSandbox();if(cur==='ivs')renderIVs();if(cur==='plist')renderPL();if(cur==='t3'){t3A.render();t3B.render();renderT3();}if(GUIDES[cur])guide(cur);setSummary();if(cur==='preview'){pvSlots.render();pvSummary();renderPreviewInputs();renderPreview();}}
 document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.v)));
 document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.g;go(lastView[g]||GROUPS[g][0]);window.scrollTo({top:0});}));
 document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){const v=b.dataset.go;if(v==='gbl')G3S='sug';go(v);window.scrollTo({top:0});}});

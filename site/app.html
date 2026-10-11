@@ -358,6 +358,11 @@ dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
   .sbrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.sbl{font-size:12px;color:var(--muted);font-weight:700}
   .sbst label{display:inline-flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)}
   .sbrange{display:grid;grid-template-columns:110px minmax(0,1fr) 84px;gap:8px;align-items:center}.sbrange input{width:100%}.sbrange b{font-size:12px;text-align:right}
+  .t3strat{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px;font-size:13px}.t3strat select{max-width:100%}
+  .t3m{display:grid;grid-template-columns:auto 1fr 90px auto;gap:8px;align-items:center;padding:4px 0;font-size:14px}.t3m.out{opacity:.5}.t3m.out span:nth-child(2){text-decoration:line-through}
+  .t3pbp{margin:6px 0 0 20px;display:grid;gap:8px;font-size:14px}.t3pbp li{padding-left:4px}.t3ex{background:var(--sunk);border-radius:8px;padding:8px 10px}
+  .t3sw,.t3in{color:var(--muted);font-style:italic}.t3ch{font-size:13px;margin:4px 0;line-height:1.7}
+  @media (max-width:520px){.t3m{grid-template-columns:auto 1fr 60px}.t3m .num{grid-column:2/-1}}
   .sbverdict{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:18px;padding:10px 12px;border-radius:8px;background:var(--sunk);margin-bottom:6px}
   .sbverdict.w0{background:var(--accent-soft)}.sbverdict.w1{background:#FCE8DD}.sbverdict b{font-family:var(--display)}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sbverdict.w1{background:#3A2416}}:root[data-theme="dark"] .sbverdict.w1{background:#3A2416}
@@ -628,6 +633,7 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
     <button role="tab" data-v="sandbox" id="t-sandbox">Battle sandbox</button>
     <button role="tab" data-v="ivs" id="t-ivs">Best IVs</button>
     <button role="tab" data-v="plist" id="t-plist">Pokémon list</button>
+    <button role="tab" data-v="t3" id="t-t3">3v3 battle</button>
     <button role="tab" data-v="types" id="t-types">Type quiz</button>
     <button role="tab" data-v="whowins" id="t-whowins">Who wins?</button>
     <button role="tab" data-v="counts" id="t-counts">Move counts</button>
@@ -791,6 +797,17 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
   <div id="guide-plist"></div>
   <p class="lede">Pokémon list: every Pokémon in the site's data with its PvPoke id, typing, moveset and default IVs. Filter it, tick the ones you want, then download it for Excel, copy it as a PvPoke import list (it pastes straight into PvPoke's custom groups), or send it to the battle matrix.</p>
   <div class="card" id="plIn"></div>
+</section>
+
+<section class="view" id="v-t3" hidden>
+  <div id="guide-t3"></div>
+  <p class="lede">3v3 battle: play two full teams of three against each other with PvPoke's battle engine. Each side has a plan for its lead, who comes in after a faint and how to spend shields. HP, energy and shields carry over between exchanges, and every lead pairing is played out so you can see the safest lead.</p>
+  <div class="cols">
+    <div class="card"><h3 style="font-size:18px;margin-bottom:8px">Your team</h3><div id="t3A"></div><div id="t3SA"></div></div>
+    <div class="card"><h3 style="font-size:18px;margin-bottom:8px">Their team</h3><div id="t3B"></div><div id="t3SB"></div></div>
+  </div>
+  <div class="controls" style="margin:12px 0"><button class="btn" id="t3Mine">Use my first three from Team Building</button><button class="btn ghost" id="t3Rand">Random Day 2 team for them</button><button class="btn ghost" id="t3Swap">Swap sides</button></div>
+  <div id="t3Out" style="display:grid;gap:16px"></div>
 </section>
 
 <section class="view" id="v-types" hidden>

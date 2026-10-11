@@ -351,6 +351,12 @@ dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
   .btn:active,.seg button:active,.gbtn:active,.lk:active{transform:scale(.96)}
   dialog#shareDlg[open]{animation:gsRise .3s cubic-bezier(.2,.7,.3,1)}
   .kpi .big{display:inline-block}
+.kpi.band-good{background:var(--win-soft);border-color:var(--win)}
+.kpi.band-good .num{color:var(--win)}
+.kpi.band-ok{background:var(--accent-soft);border-color:var(--accent)}
+.kpi.band-ok .num{color:var(--accent)}
+.kpi.band-bad{background:var(--loss-soft);border-color:var(--loss)}
+.kpi.band-bad .num{color:var(--loss)}
 }
 @keyframes gsRise{from{opacity:0;transform:translateY(8px)}}
 @keyframes gsFade{from{opacity:0}}
@@ -1089,7 +1095,8 @@ function suggest(units,k){const base=teamEval(units),have=new Set(units.map(u=>u
   for(let c=0;c<NC;c++){if(!(okCommon(c)||okAnti(c))||have.has(Cx[c].n))continue;const e=teamEval([...units,unitOfCand(c)]);out.push({c,e,d:e.score-base.score});}
   out.sort((a,b)=>b.d-a.d);const seen=new Set(),res=[];for(const o of out){if(seen.has(Cx[o.c].n))continue;seen.add(Cx[o.c].n);res.push(o);if(res.length>=k)break;}return {base,res};}
 function complete(units,first){let cur=[...units,unitOfCand(first)];while(cur.length<6){const s=suggest(cur,1);if(!s.res.length)break;cur.push(unitOfCand(s.res[0].c));}return {units:cur,e:teamEval(cur)};}
-function metricRow(e,k){k=k||'m';const cu=(v,f,s)=>`data-cu="${v}" data-cuf="${f}" data-cuk="${k}${s}"`;return `<div class="kpis"><div class="card kpi"><small>Core teams with 1+ answer</small><span class="big num" ${cu(e.c1,'p',1)}>${pct(e.c1)}</span></div><div class="card kpi"><small>With 2+ answers</small><span class="big num" ${cu(e.c2,'p',2)}>${pct(e.c2)}</span></div><div class="card kpi"><small>Wins vs top meta (usage-weighted)</small><span class="big num" ${cu(e.th,'p',3)}>${pct(e.th)}</span></div><div class="card kpi"><small>Shared weaknesses without 2 resists</small><span class="big num" ${cu(e.wr.v,'i',4)}>${e.wr.v}</span></div></div>`;}
+function covBand(v){const p=Math.round(v*100);return p>=95?'good':p>=88?'ok':'bad';}
+function metricRow(e,k){k=k||'m';const cu=(v,f,s)=>`data-cu="${v}" data-cuf="${f}" data-cuk="${k}${s}"`;return `<div class="kpis"><div class="card kpi band-${covBand(e.c1)}"><small>Core teams with 1+ answer</small><span class="big num" ${cu(e.c1,'p',1)}>${pct(e.c1)}</span></div><div class="card kpi band-${covBand(e.c2)}"><small>With 2+ answers</small><span class="big num" ${cu(e.c2,'p',2)}>${pct(e.c2)}</span></div><div class="card kpi"><small>Wins vs top meta (usage-weighted)</small><span class="big num" ${cu(e.th,'p',3)}>${pct(e.th)}</span></div><div class="card kpi"><small>Shared weaknesses without 2 resists</small><span class="big num" ${cu(e.wr.v,'i',4)}>${e.wr.v}</span></div></div>`;}
 function sugLine(o,base,units){const x=Cx[o.c],e=o.e;const newly=[...e.beaten].filter(i=>!base.beaten.has(i)).sort((a,b)=>Mx[b].u-Mx[a].u).slice(0,5).map(i=>esc(dn(Mx[i].n)));
   const fixed=base.wr.bad.filter(t=>!e.wr.bad.includes(t)),added=e.wr.bad.filter(t=>!base.wr.bad.includes(t));
   return `<div class="ans" style="cursor:default"><span class="nm">${monTag(x.n,x.sid)} <span class="tag ${okAnti(o.c)?'anti':''}">${okAnti(o.c)?T('Anti-meta'):T('Meta')}</span><small>${[x.f,...x.c].map(mvTag).join(' · ')}</small>

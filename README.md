@@ -41,6 +41,10 @@ Replace `inputs/gamemaster.json` (from PvPoke's GitHub: `src/data/gamemaster.jso
 
 Optional accuracy check: put PvPoke matrix exports (`top_75_vs_*.csv`) in `inputs/` and run `node tools/calibrate_pve.js` (currently 100% identical ratings across 54,000 matchups). `python tools/calibrate.py` checks the Python fallback simulator. Current agreement on the winner, excluding exact ties: ~94% at 0 shields and ~92% at 1 and 2 shields across PvPoke's top 242 (90–93% against the top 100 alone). Aegislash's form change is modelled.
 
+## Weekly refresh (automatic)
+
+A scheduled task runs every Monday at 5:50am Sydney time. It pulls PvPoke's latest gamemaster, rankings and engine code (`tools/refresh_pvpoke.py`), and if anything changed it rebuilds the site, checks it in a headless browser, and publishes it: kit source to the `kit` branch of github.com/sheehanisme11/gl-core-scout, website to `main`. You get a notification with what changed. The kit on the `kit` branch is the master copy; download it from there (Code → Download ZIP while viewing the `kit` branch) if you want to run it yourself.
+
 ## Battle engine
 
 Battles use PvPoke's own engine (https://github.com/pvpoke/pvpoke, MIT License). Its source files are in `vendor/pvpoke/` (see the README there); `pipeline/pve_build.py` wraps them into `site/pve.js`, which the kit runs with Node.js (`pipeline/pve_matrix.js`) and the website runs in the browser. The site's original fast simulator (`site/sim.js`, mirrored by `pipeline/simcore.py`) is kept for screening thousands of IV spreads before everything shown is re-run with PvPoke's engine. To update the engine, copy the same files from PvPoke's `src/js/` into `vendor/pvpoke/` and run the kit.

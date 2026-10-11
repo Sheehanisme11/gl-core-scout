@@ -406,6 +406,8 @@ dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
   .ivo .badge{width:22px;height:22px;font-size:9px}
   .ivdp td{vertical-align:middle;font-size:13px}
   .pltbl td{vertical-align:middle;font-size:13px}.pltbl code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .guide{background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px}.guide ol{margin:6px 0 4px;padding-left:20px;display:grid;gap:2px}
+  .ivcin{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end;margin:8px 0}.ivcc h4{margin:0 0 4px}.ivcs,.ivcr{font-size:13px;margin:4px 0}.ivbp td{vertical-align:middle;font-size:13px}
   /* battle matrix */
   .mxgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
   .mxg{display:grid;gap:10px;align-content:start}
@@ -763,6 +765,7 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
 </section>
 
 <section class="view" id="v-matrix" hidden>
+  <div id="guide-matrix"></div>
   <p class="lede">Battle matrix: every Pokémon in Group A battles every Pokémon in Group B, the same way PvPoke's matrix works. Up to 300 per group, shields set separately for each side, your own IVs, and a download that opens in Excel. Groups import and export in PvPoke's format, so you can copy them between the two sites.</p>
   <div class="mxgroups"><div class="card mxg" id="mxgA"></div><div class="card mxg" id="mxgB"></div></div>
   <div class="card mxrun" id="mxRun"></div>
@@ -770,6 +773,7 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
 </section>
 
 <section class="view" id="v-sandbox" hidden>
+  <div id="guide-sandbox"></div>
   <p class="lede">Battle sandbox: one matchup where you control every input. Change moves, IVs, shields, starting HP, starting energy and stat stages, or turn shield baiting off, and the battle re-runs straight away with a turn-by-turn breakdown.</p>
   <div class="controls"><label class="fld" for="sbCap">Level cap <select id="sbCap"><option value="40">40</option><option value="41">41</option><option value="50">50</option><option value="51">51 (best buddy)</option></select></label><button class="link" id="sbFromTeam">Use my first Team Building Pokémon</button></div>
   <div class="sbin" id="sbIn"></div>
@@ -777,12 +781,14 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
 </section>
 
 <section class="view" id="v-ivs" hidden>
+  <div id="guide-ivs"></div>
   <p class="lede">Best IVs: search a Pokémon to rank its IV spreads by how they actually battle against the regional meta, not just by stat product. You get the top 200 with CP, stats, stat product, average rating and wins, the matchups each spread flips compared with PvPoke's default IVs, and which matchups your IVs can never change. Ultra League shows stat product ranks.</p>
   <div id="ivIn"></div>
   <div id="ivOut" style="display:grid;gap:16px;margin-top:16px"></div>
 </section>
 
 <section class="view" id="v-plist" hidden>
+  <div id="guide-plist"></div>
   <p class="lede">Pokémon list: every Pokémon in the site's data with its PvPoke id, typing, moveset and default IVs. Filter it, tick the ones you want, then download it for Excel, copy it as a PvPoke import list (it pastes straight into PvPoke's custom groups), or send it to the battle matrix.</p>
   <div class="card" id="plIn"></div>
 </section>

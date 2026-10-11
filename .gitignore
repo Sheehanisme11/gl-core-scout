@@ -1,0 +1,7 @@
+output/
+site/data.js
+site/i18n.js
+site/types.js
+site/pve.js
+__pycache__/
+*.pyc

@@ -1,0 +1,874 @@
+<meta charset="utf-8">
+<title>GL Core Scout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: sticky scout header + tab rail; one working column of expandable report rows, max 1100px */
+:root{
+  --bg:#F1F3F7;--surface:#FFFFFF;--sunk:#E8ECF3;--ink:#131A29;--muted:#566176;--line:#D8DEE8;
+  --accent:#2153D0;--accent-soft:#E3EAFB;--on-accent:#FFFFFF;
+  --win:#1C8754;--win-soft:#DDF2E7;--even:#A26A10;--even-soft:#F7ECD6;--loss:#C23A3A;--loss-soft:#F8E0E0;
+  --display:"Chakra Petch","Arial Narrow",system-ui,sans-serif;--body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C111B;--surface:#141B29;--sunk:#0F1622;--ink:#E7EBF3;--muted:#99A3B7;--line:#253045;
+  --accent:#7398FF;--accent-soft:#1B2747;--on-accent:#0C111B;
+  --win:#43C98D;--win-soft:#123326;--even:#E5A94A;--even-soft:#33270F;--loss:#F07171;--loss-soft:#3A1717;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C111B;--surface:#141B29;--sunk:#0F1622;--ink:#E7EBF3;--muted:#99A3B7;--line:#253045;
+  --accent:#7398FF;--accent-soft:#1B2747;--on-accent:#0C111B;
+  --win:#43C98D;--win-soft:#123326;--even:#E5A94A;--even-soft:#33270F;--loss:#F07171;--loss-soft:#3A1717;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.view>*,#teamOut>*,#bOut>*,.card{min-width:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-block:14px 8px}
+.brand h1{font-size:24px;letter-spacing:.02em;text-transform:uppercase}
+.brand h1 b{color:var(--accent)}
+.brand .sub{color:var(--muted);font-size:13px}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px;padding-bottom:8px}
+nav.tabs button{border:0;background:none;padding:8px 12px;border-radius:999px;font-family:var(--display);font-weight:600;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+main{padding-block:18px 60px}
+section.view{display:grid;gap:16px}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.seg{display:inline-flex;background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:700;font-size:13px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+label.fld{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+input[type=search],input[type=text],select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0}
+input[type=range]{accent-color:var(--accent)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* report rows */
+.list{display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
+.row{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.row>button.head{all:unset;box-sizing:border-box;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:12px 14px;cursor:pointer}
+.row>button.head:focus-visible{outline:2px solid var(--accent);border-radius:var(--r)}
+.rank{font-family:var(--display);font-weight:700;font-size:18px;color:var(--muted);text-align:right}
+.core{display:flex;flex-wrap:wrap;gap:6px 10px;min-width:0}
+.mon{display:inline-flex;align-items:center;gap:6px;font-weight:700;min-width:0}
+.dots{display:inline-flex;gap:2px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+.plus{color:var(--muted)}
+.stats{display:flex;gap:14px;align-items:center}
+.stat{display:grid;justify-items:end;line-height:1.1}
+.stat small{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .num{font-size:15px}
+.bar{position:relative;width:70px;height:6px;background:var(--sunk);border-radius:3px;margin-top:4px;overflow:visible}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px}
+.bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
+.conv{font-family:var(--mono);font-size:13px;padding:2px 8px;border-radius:999px;font-weight:500}
+.conv.hi{background:var(--win-soft);color:var(--win)}.conv.mid{background:var(--sunk);color:var(--muted)}.conv.lo{background:var(--loss-soft);color:var(--loss)}
+.detail{border-top:1px solid var(--line);padding:14px;display:grid;gap:14px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.panel h3{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.ans{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line)}
+.ans:last-child{border-bottom:0}
+.ans .nm{font-weight:700;min-width:0}
+.ans .nm small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.chips{display:inline-flex;gap:3px}
+.chip{font-family:var(--mono);font-size:11px;font-weight:500;min-width:26px;height:22px;padding:0 4px;display:inline-grid;place-items:center;border-radius:5px;border:1px solid transparent}
+.chip.W{background:var(--win);color:var(--on-accent)}.chip.CW{background:var(--win-soft);color:var(--win);border-color:var(--win)}
+.chip.T{background:var(--sunk);color:var(--muted);border-color:var(--line)}
+.chip.CL{background:var(--even-soft);color:var(--even);border-color:var(--even)}.chip.L{background:var(--loss);color:var(--on-accent)}
+.chip.chg{box-shadow:0 0 0 2px var(--accent)}
+.why{font-size:13px;color:var(--muted);margin:0}
+.why b{color:var(--ink)}
+.combo{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:14px}
+.tag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:var(--sunk);color:var(--muted);font-weight:700}
+.tag.anti{background:var(--accent-soft);color:var(--accent)}
+.link{border:0;background:none;color:var(--accent);font-weight:700;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);align-items:center}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kpi .num{font-size:24px}
+.hero-mon{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.hero-mon h2{font-size:30px}
+.typechip{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 9px 2px 3px;border-radius:999px;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}
+.moves{color:var(--muted);font-size:14px}
+table.vt{width:100%;border-collapse:collapse;font-size:14px}
+.tblwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table.vt th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.vt td{padding:9px 10px;border-bottom:1px solid var(--line)}
+table.vt tr:last-child td{border-bottom:0}
+table.vt td.r,table.vt th.r{text-align:right}
+.meter{display:inline-block;width:90px;height:8px;background:var(--sunk);border-radius:4px;vertical-align:middle;margin-left:8px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+.teamgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:8px}
+.slot{display:flex;gap:6px;align-items:center}
+.slot input{flex:1;width:100%}
+.slot button{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:34px;height:34px;cursor:pointer;flex:none}
+.big{font-family:var(--display);font-size:34px;font-weight:700}
+.status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700}
+.status.ok{background:var(--win-soft);color:var(--win)}.status.part{background:var(--even-soft);color:var(--even)}.status.no{background:var(--loss-soft);color:var(--loss)}
+.prose{max-width:70ch}
+.prose p{margin:.4em 0 .9em}
+.empty{color:var(--muted);padding:20px;text-align:center}
+@media (max-width:640px){
+  .row>button.head{grid-template-columns:26px minmax(0,1fr);}
+  .row>button.head .stats{grid-column:2;justify-content:flex-start}
+  .stat{justify-items:start}
+  .brand h1{font-size:20px}
+}
+@media (prefers-reduced-motion:no-preference){.row{transition:border-color .15s}.row:hover{border-color:var(--accent)}}
+.setbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding-bottom:10px;font-size:12px;color:var(--muted)}
+.setbar .seg button{padding:4px 10px;font-size:12px}
+.setbar label{display:flex;gap:6px;align-items:center}
+.setbar select{padding:3px 6px;font-size:12px}
+.ans{cursor:pointer}
+.ans:hover .nm{color:var(--accent)}
+.ansx{grid-column:1/-1;font-size:12px}
+.ansx table{border-collapse:collapse;margin:4px 0 8px}
+.ansx td,.ansx th{padding:3px 8px;text-align:left;border-bottom:1px solid var(--line)}
+.ansx th{font-weight:700;color:var(--muted);font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+.labslots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:grid;gap:8px;min-width:0}
+.lab .top{display:flex;gap:6px;align-items:center}
+.lab .top input{flex:1;min-width:0}
+.lab .top button{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:34px;height:34px;cursor:pointer;flex:none}
+.lab .mvs{display:grid;grid-template-columns:1fr;gap:6px}
+.lab .mvs label{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.lab .mvs select{width:100%}
+.lab .mvs select.changed{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.variants{display:flex;flex-wrap:wrap;gap:4px}
+.variants button{border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;color:var(--ink)}
+.variants button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700}
+.sumline{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;align-items:center}
+.delta{font-size:12px;display:grid;gap:3px}
+.delta .up{color:var(--win)}.delta .down{color:var(--loss)}
+.grid table{border-collapse:collapse;font-size:13px;width:100%}
+.grid th,.grid td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.grid th:first-child,.grid td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1}
+.grid thead th{font-size:11px;color:var(--muted);font-weight:700}
+.wk td.flag{color:var(--loss);font-weight:700}
+.hint{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.hint button{border:1px dashed var(--accent);background:none;color:var(--accent);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:12px}
+.busy{color:var(--muted);font-size:13px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
+.btn.ghost{background:none;color:var(--accent)}
+.legend .chip{margin-right:2px}
+.cellbtn{all:unset;cursor:pointer;border-radius:6px}
+.cellbtn:focus-visible{outline:2px solid var(--accent)}
+.spark{display:inline-block;vertical-align:middle;overflow:visible}
+.who{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;max-height:180px;overflow:auto}
+.whoi{white-space:normal}
+.bestline{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;flex-basis:100%;font-size:12px;font-weight:400;color:var(--ink)}
+.bestline .bl{color:var(--muted);font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.bestline .chip{min-width:22px;height:18px;font-size:10px}
+.setbar.na .seg,.setbar.na select,.setbar.na .legend{opacity:.35;pointer-events:none}
+.langpick{margin-left:auto}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.g3sum .num{font-size:14px}
+.g3sum{margin-top:6px}
+.tdhead .core .mon{font-weight:600;font-size:13px}
+.seg{flex-wrap:wrap;max-width:100%}
+@media (max-width:640px){header.top{position:static}nav.tabs button{padding:6px 9px;font-size:13px}nav.tabs{gap:2px}}
+@media (max-width:640px){.genhead{grid-template-columns:26px minmax(0,1fr)!important}.genhead .stats{grid-column:2}}
+.empty-slot{border-style:dashed;background:none}
+.ans .btn{padding:4px 10px;font-size:12px}
+.ans{grid-template-columns:minmax(0,1fr) auto auto}
+.ans:has(.btn){grid-template-columns:minmax(0,1fr) auto auto}
+
+/* redesign: band header, groups, badges, type icons, home */
+:root{--band:#0E1830;--band2:#1B2D5E;--band-ink:#E7EBF3;--band-muted:#AAB6D3;--band-accent:#7398FF;--shadow:0 1px 2px rgba(14,24,48,.06),0 6px 18px rgba(14,24,48,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--shadow:none}}
+:root[data-theme="dark"]{--shadow:none}
+header.top{position:static;background:var(--bg);border-bottom:1px solid var(--line)}
+.band{background:radial-gradient(circle at 1px 1px,rgba(115,152,255,.18) 1px,transparent 1.5px) 0 0/18px 18px,linear-gradient(120deg,var(--band),var(--band2));color:var(--band-ink)}
+.bandin{display:grid;gap:10px;padding-block:14px 10px}
+.brand{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:0}
+.logo{width:44px;height:44px;flex:none}
+.brandtxt{display:grid;gap:2px;min-width:0}
+.brand h1{color:var(--band-ink)}.brand h1 b{color:var(--band-accent)}
+.brand .sub{color:var(--band-muted)}
+.langpick select{background:rgba(255,255,255,.08);color:var(--band-ink);border-color:rgba(255,255,255,.25)}
+.langpick option{color:#131A29}
+nav.groups{display:flex;gap:6px;flex-wrap:wrap}
+.gbtn{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--band-ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-family:var(--display);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:14px}
+.gbtn svg{width:18px;height:18px;fill:currentColor}
+.gbtn[aria-current="true"]{background:var(--band-ink);color:var(--band);border-color:var(--band-ink)}
+.subbar{display:grid;gap:4px;padding-top:10px}
+nav.tabs{padding-bottom:4px}
+.setdet{padding-bottom:8px}
+.setdet summary{cursor:pointer;font-size:12px;color:var(--muted);list-style:none;display:inline-flex;gap:8px;align-items:center;padding:4px 0}
+.setdet summary::before{content:"⚙";font-size:13px}
+.setdet .sumlab{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.setdet[open] summary{margin-bottom:4px}
+.card,.row{border-radius:14px;box-shadow:var(--shadow)}
+.badge{position:relative;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;flex:none;color:#fff;font-family:var(--display);font-weight:700;font-size:10px;letter-spacing:.02em;text-shadow:0 1px 1px rgba(0,0,0,.45);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.badge.sh{box-shadow:0 0 0 2px #7A45C9,inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.badge.big{width:44px;height:44px;font-size:16px}
+.typechip{display:inline-flex;align-items:center;gap:4px}
+.typechip img{width:16px;height:16px;flex:none}
+.ticon{width:15px;height:15px;vertical-align:-3px;margin-right:2px}
+.ttag,.mvtag{white-space:nowrap}
+.whoi{min-width:0;max-width:100%}
+.detail .sumline{flex-wrap:wrap}
+.badge .tics{position:absolute;right:-7px;bottom:-5px;display:flex}
+.badge .tics img{width:11px;height:11px;margin:0 0 0 -4px;vertical-align:0;border-radius:50%;box-shadow:0 0 0 1.5px var(--card,#fff)}
+.badge.big .tics img{width:20px;height:20px}
+.hero{padding:6px 0 4px}
+.hero h2{font-size:clamp(24px,4vw,34px);letter-spacing:.01em}
+.ctas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+.cta{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:40px 1fr;grid-template-rows:auto auto;column-gap:12px;row-gap:2px;align-items:center;padding:16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
+.cta svg{grid-row:1/3;width:40px;height:40px;padding:8px;border-radius:12px;background:var(--accent-soft);fill:var(--accent)}
+.cta b{font-family:var(--display);font-size:17px}
+.cta span{color:var(--muted);font-size:13px}
+.cta:hover{border-color:var(--accent)}
+.cta:focus-visible{outline:2px solid var(--accent)}
+.ch{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.hrow{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.hrow:last-child{border-bottom:0}
+.hrow>.link{text-align:left;justify-self:start;min-width:0}
+@media (max-width:640px){.logo{width:36px;height:36px}.brand h1{font-size:18px}.brand .sub{font-size:12px}.langpick select{padding:5px 6px;font-size:13px}}
+.hbar{height:8px;background:var(--sunk);border-radius:4px;overflow:hidden}.hbar i{display:block;height:100%;background:var(--accent);border-radius:0 4px 4px 0}
+@media (max-width:640px){
+  nav.groups{position:fixed;left:0;right:0;bottom:0;z-index:20;justify-content:space-around;flex-wrap:nowrap;gap:0;background:linear-gradient(120deg,var(--band),var(--band2));padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.12)}
+  .gbtn{flex-direction:column;gap:2px;border:0;background:none;padding:4px 6px;font-size:10px;border-radius:10px;flex:1}
+  .gbtn svg{width:22px;height:22px}
+  .gbtn[aria-current="true"]{background:rgba(255,255,255,.12);color:var(--band-ink)}
+  main{padding-bottom:96px}
+  .bandin{padding-block:12px}
+  .hrow{grid-template-columns:minmax(0,1fr) 70px auto}
+}
+
+/* ---- heatmaps */
+.row>.detail,.chartbox{min-width:0;max-width:100%}
+.chartbox .hmwrap{width:100%}
+table.hm th,table.hm td{border:0}
+.hmwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+table.hm{border-collapse:separate;border-spacing:3px;font-size:13px}
+table.hm th.hl{text-align:left;font-weight:400;padding:2px 8px 2px 0;white-space:nowrap;position:sticky;left:0;background:var(--surface);z-index:1}
+table.hm th.hh{font-weight:400;font-size:10px;color:var(--muted);padding:0 0 4px;vertical-align:bottom;min-width:44px}
+table.hm th.hh .badge{display:grid;margin:0 auto 3px}
+table.hm th.hh .hn{display:block;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
+table.hm th.hb{font-family:var(--display);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+table.hm .hx{color:var(--muted);font-size:12px;text-align:right;padding-right:6px}
+td.hc{min-width:44px;height:30px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:500;border-radius:6px;cursor:default;transition:transform .15s}
+td.hc[data-r3]{cursor:pointer}
+td.hc[data-r3]:hover{transform:scale(1.08)}
+td.hc.sel{outline:2px solid var(--ink);outline-offset:1px}
+td.hc.chg{box-shadow:inset 0 0 0 2px var(--accent),0 0 0 1px var(--accent)}
+.hmfoot{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)}
+.hmleg{display:inline-flex;align-items:center;gap:6px}
+.hmleg i{display:inline-block;width:120px;height:10px;border-radius:5px;background:linear-gradient(90deg,rgb(206,60,60),rgba(206,60,60,.16) 48%,rgba(28,150,90,.16) 52%,rgb(28,150,90))}
+.hminfo{min-height:22px}
+table.th td.tc{min-width:30px;height:28px;text-align:center;font-family:var(--mono);font-size:10px;border-radius:5px;background:var(--sunk)}
+table.th td.tc:empty{background:transparent;border:1px dashed var(--line)}
+table.th th.tt{padding:0 0 4px}
+table.th th.tt .ticon{width:22px;height:22px;margin:0}
+table.th tr.sumr td.tc{background:var(--sunk);color:var(--muted);font-weight:500}
+table.th tr.sumr td.tc.flag{background:var(--loss-soft);color:var(--loss);box-shadow:inset 0 0 0 2px var(--loss)}
+table.th tr.sumr td.tc.cov{background:var(--win-soft);color:var(--win)}
+table.th tr.sumr th.hl{font-size:12px;color:var(--muted);white-space:normal;max-width:150px}
+@media (max-width:640px){
+  table.hm th.hl{max-width:118px;overflow:hidden}
+  table.hm th.hl .mon{display:flex;font-size:12px;max-width:118px;overflow:hidden;white-space:nowrap}
+  table.hm th.hl .mon{text-overflow:ellipsis}
+  td.hc{min-width:38px;height:28px;font-size:10px}
+  table.hm th.hh{min-width:38px}
+  table.hm .hx{font-size:11px;padding-right:2px}
+}
+/* ---- stacked tier bar */
+.tbar{display:flex;width:100%;max-width:340px;height:10px;border-radius:5px;overflow:hidden;background:var(--sunk);flex-basis:100%;margin:2px 0 4px}
+.tbar i{display:block;height:100%}
+.tbar i.W{background:var(--win)}.tbar i.CW{background:color-mix(in srgb,var(--win) 45%,transparent)}.tbar i.T{background:var(--line)}.tbar i.CL{background:color-mix(in srgb,var(--even) 55%,transparent)}.tbar i.L{background:var(--loss)}
+.kpi .tbar{max-width:none;margin:6px 0}
+/* ---- line chart */
+.lchart{width:100%;height:auto;max-height:280px;display:block}
+.lchart .gl{stroke:var(--line);stroke-width:1}
+.lchart .ax{font-size:11px;fill:var(--muted);font-family:var(--body)}
+.lchart g.ln polyline{fill:none;stroke:var(--c);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.lchart g.ln circle{fill:var(--surface);stroke:var(--c);stroke-width:2.5}
+.lchart g.ln{transition:opacity .2s}
+.lchart g.ln.dim{opacity:.12}
+.lleg{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:6px}
+.lk{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px 3px 6px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.lk i{width:14px;height:4px;border-radius:2px;background:var(--c)}
+.lk[aria-pressed="true"]{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c)}
+/* ---- scatter */
+.scat{position:relative;padding:4px 0 26px 26px}
+.scat .plot{position:relative;height:340px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);margin:10px 14px 0 0}
+.scat .sp{all:unset;position:absolute;transform:translate(-50%,-50%);cursor:pointer;border-radius:50%;line-height:0}
+.scat .sp:hover,.scat .sp.sel,.scat .sp:focus-visible{z-index:3;transform:translate(-50%,-50%) scale(1.35)}
+.scat .sp.sel .badge{box-shadow:0 0 0 3px var(--ink)}
+.scat .pr{position:absolute;left:0;right:0;border-top:1px dashed var(--muted);opacity:.6}
+.scat .pr em,.scat .pt-x em{font-style:normal;font-size:11px;color:var(--muted);font-family:var(--mono)}
+.scat .pr em{position:absolute;right:0;top:-16px}
+.scat .pt-x{position:absolute;bottom:-20px;transform:translateX(-50%)}
+.scat .q{position:absolute;font-size:11px;font-family:var(--display);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);opacity:.75}
+.scat .q1{right:6px;top:4px}.scat .q2{left:8px;top:4px}.scat .q3{right:6px;bottom:4px}
+.scat .axl{text-align:right;font-size:12px;color:var(--muted);margin:22px 14px 0 0}
+.scat .ayl{position:absolute;left:0;top:0;font-size:12px;color:var(--muted)}
+@media (max-width:640px){.scat .plot{height:280px}}
+/* ---- share */
+.sharebar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:var(--muted)}
+details.imp summary{cursor:pointer;color:var(--accent);font-weight:700;font-size:14px}
+details.imp .controls{margin-top:8px}
+dialog#shareDlg{border:0;border-radius:14px;padding:0;background:var(--surface);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
+.shbody{padding:16px;display:grid;gap:12px;overflow:auto;max-height:calc(100vh - 24px)}
+.shhead{display:flex;justify-content:space-between;align-items:center}
+.shhead button{all:unset;cursor:pointer;font-size:22px;line-height:1;padding:4px 8px;border-radius:6px}
+#shImg{width:100%;height:auto;border-radius:10px;display:block;background:#131A29}
+#shLink{width:100%;font-family:var(--mono);font-size:12px}
+#toast{position:fixed;left:50%;bottom:84px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;z-index:50;transition:opacity .25s,transform .25s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+/* ---- motion */
+@media (prefers-reduced-motion:no-preference){
+  section.view.enter>*{animation:gsRise .42s cubic-bezier(.2,.7,.3,1) both}
+  section.view.enter>*:nth-child(2){animation-delay:.04s}section.view.enter>*:nth-child(3){animation-delay:.08s}section.view.enter>*:nth-child(4){animation-delay:.12s}section.view.enter>*:nth-child(5){animation-delay:.16s}section.view.enter>*:nth-child(n+6){animation-delay:.2s}
+  .list>.row:nth-child(-n+12){animation:gsRise .35s cubic-bezier(.2,.7,.3,1) both}
+  .list>.row:nth-child(2){animation-delay:.03s}.list>.row:nth-child(3){animation-delay:.06s}.list>.row:nth-child(4){animation-delay:.09s}.list>.row:nth-child(5){animation-delay:.12s}.list>.row:nth-child(6){animation-delay:.15s}.list>.row:nth-child(n+7){animation-delay:.18s}
+  .row>.detail:not([hidden]){animation:gsRise .28s ease-out both}
+  .hbar i,.tbar i{animation:gsGrow .7s cubic-bezier(.2,.7,.3,1) both;transform-origin:left}
+  .spark rect[fill="var(--accent)"]{animation:gsGrowY .6s cubic-bezier(.2,.7,.3,1) both;transform-box:fill-box;transform-origin:bottom}
+  table.hm{animation:gsFade .35s ease-out both}
+  td.hc.flip{animation:gsFlip 1.1s ease-out}
+  td.hc.flip.up{--fc:var(--win)}td.hc.flip.down{--fc:var(--loss)}
+  .lchart g.ln polyline{stroke-dasharray:1;stroke-dashoffset:1;animation:gsDraw .9s ease-out forwards}
+  .lchart g.ln circle{animation:gsFade .3s .6s both}
+  .scat .sp{animation:gsPop .4s cubic-bezier(.3,1.4,.5,1) both;animation-delay:calc(min(var(--k),60) * 12ms)}
+  .chip,.btn,.seg button,.gbtn,.lk{transition:transform .12s,background-color .2s,color .2s,box-shadow .2s}
+  .btn:active,.seg button:active,.gbtn:active,.lk:active{transform:scale(.96)}
+  dialog#shareDlg[open]{animation:gsRise .3s cubic-bezier(.2,.7,.3,1)}
+  .kpi .big{display:inline-block}
+  .kpi.band-good{background:var(--win-soft);border-color:var(--win)}
+  .kpi.band-good .num{color:var(--win)}
+  .kpi.band-ok{background:var(--accent-soft);border-color:var(--accent)}
+  .kpi.band-ok .num{color:var(--accent)}
+  .kpi.band-bad{background:var(--loss-soft);border-color:var(--loss)}
+  .kpi.band-bad .num{color:var(--loss)}
+  /* battle sandbox */
+  .sbin{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:start}
+  @media (max-width:820px){.sbin{grid-template-columns:minmax(0,1fr)}.sbmid{justify-self:center}}
+  .sbmid{align-self:center}.sbmid .btn{font-size:18px;padding:6px 12px}
+  .sbside{display:grid;gap:10px}.sb0{border-top:4px solid var(--accent)}.sb1{border-top:4px solid #D9480F}
+  .sbh{display:flex;gap:10px;align-items:center}.sbt{display:grid;gap:4px;flex:1;min-width:0}.sbt input{font-weight:700;font-size:16px}
+  .sbmv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px}.sbmv label{display:grid;gap:2px;font-size:11px;color:var(--muted)}.sbmv select{width:100%;color:var(--ink)}
+  .sbivb{margin:0}.sbstats{font-size:12px;color:var(--muted)}
+  .sbrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.sbl{font-size:12px;color:var(--muted);font-weight:700}
+  .sbst label{display:inline-flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)}
+  .sbrange{display:grid;grid-template-columns:110px minmax(0,1fr) 84px;gap:8px;align-items:center}.sbrange input{width:100%}.sbrange b{font-size:12px;text-align:right}
+  .sbverdict{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:18px;padding:10px 12px;border-radius:8px;background:var(--sunk);margin-bottom:6px}
+  .sbverdict.w0{background:var(--accent-soft)}.sbverdict.w1{background:#FCE8DD}.sbverdict b{font-family:var(--display)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sbverdict.w1{background:#3A2416}}:root[data-theme="dark"] .sbverdict.w1{background:#3A2416}
+  .bigr{font-family:var(--mono);font-weight:700;font-size:20px}
+  .sbhp{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13px;margin:4px 0}.sbhpn{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sbbar{position:relative;height:12px;background:var(--sunk);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .sbbar i{position:absolute;left:0;top:0;bottom:0}.sbbar .start{background:var(--loss-soft)}.sbbar .left{background:var(--win)}
+  .sbtl{margin-top:12px;display:grid;gap:6px}
+  .sblane{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center}.sbln{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sbtrack{position:relative;height:30px;background:var(--sunk);border-radius:6px;border:1px solid var(--line)}
+  .sbtrack .tf{position:absolute;top:11px;width:4px;height:8px;border-radius:2px;margin-left:-2px;opacity:.85}
+  .sbtrack .tc{position:absolute;top:3px;width:22px;height:22px;border-radius:50%;margin-left:-11px;display:grid;place-items:center;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+  .sbtrack .tc span{font-size:8px;font-weight:700;color:#fff;font-family:var(--mono);letter-spacing:-.02em}
+  .sbtrack .tc.sd{background:var(--surface)!important;box-shadow:0 0 0 2px var(--accent)}.sbtrack .tc.sd span{color:var(--accent)}
+  .sbhpg{width:100%;height:46px;background:var(--sunk);border-radius:6px;border:1px solid var(--line)}
+  .sbhpg polyline{fill:none;stroke-width:2;vector-effect:non-scaling-stroke}.sbhpg .l0{stroke:var(--accent)}.sbhpg .l1{stroke:#D9480F}
+  .sbaxis{display:flex;justify-content:space-between;margin-left:118px;font-size:11px;color:var(--muted);font-family:var(--mono)}
+  .sbkey{font-size:11px;color:var(--muted);display:flex;gap:6px 12px;align-items:center;flex-wrap:wrap;margin:2px 0 0 118px}
+  .sbkey i{display:inline-block;vertical-align:middle;margin-right:2px}.sbkey .tf{width:4px;height:8px;background:var(--muted);border-radius:2px}.sbkey .tc{width:12px;height:12px;border-radius:50%;background:var(--muted)}.sbkey .tc.sd{background:none;box-shadow:0 0 0 2px var(--accent)}
+  @media (max-width:640px){.sblane{grid-template-columns:70px minmax(0,1fr)}.sbaxis,.sbkey{margin-left:78px}.sbhp{grid-template-columns:90px minmax(0,1fr)}.sbhp .num{grid-column:2}.sbrange{grid-template-columns:96px minmax(0,1fr) 70px}}
+  .sblog .sbfast td{color:var(--muted);font-size:12px}.sblog td{vertical-align:middle}
+  .sbdmg td{vertical-align:top}.sbdmg td div{margin-bottom:3px}
+  .sbpts h4,.sbivt+h4{margin:0 0 4px}.sbpts p{font-size:12px;color:var(--muted);margin:6px 0 4px}
+  .sbptl{display:flex;flex-wrap:wrap;gap:4px}.sbpt{font-size:12px;padding:2px 7px;border-radius:5px;background:var(--sunk);border:1px solid var(--line)}.sbpt.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  .sbivt tr.cur td{background:var(--accent-soft)}
+  /* IV analysis */
+  .sbivc .mxgo{margin:8px 0}
+  .sbivv{padding:12px 14px;border-radius:8px;margin:8px 0;font-size:15px;border:1px solid}
+  .sbivv.good{background:var(--win-soft);color:var(--win);border-color:var(--win)}.sbivv.bad{background:var(--loss-soft);color:var(--loss);border-color:var(--loss)}.sbivv.ok{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+  .stale{opacity:.5}
+  .sbbest{margin:6px 0 12px;padding-left:18px;display:grid;gap:4px;font-size:14px}
+  .sbivside h4{margin:0 0 6px;font-size:15px}.sbivside p{margin:4px 0;font-size:13px}
+  .sbivbar{display:flex;max-width:none;height:12px;margin:6px 0}.sbivcnt{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+  .sbrule{color:var(--ink);font-weight:700}
+  .sbflip summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--accent);margin:8px 0 4px}
+  .sbivtbl td,.sbivtbl th{padding:4px 6px;font-size:12px;white-space:nowrap}
+  .tag.ok{background:var(--win-soft);color:var(--win)}
+  /* best IVs */
+  .ivin{display:grid;gap:10px}
+  .ivt td,.ivt th{padding:5px 7px;white-space:nowrap;font-size:13px}.ivt th .link[aria-pressed="true"]{text-decoration:underline;color:var(--ink)}
+  .ivr{cursor:pointer}.ivr:hover td{background:var(--sunk)}.ivr.open td{background:var(--accent-soft)}
+  .ivdet td{background:var(--sunk);white-space:normal}.ivdx p{margin:4px 0;font-size:12px}
+  .ivh{margin:12px 0 6px;font-size:14px}.ivh.good{color:var(--win)}.ivh.bad{color:var(--loss)}.ivh.ok{color:var(--accent)}
+  .ivos{display:flex;flex-wrap:wrap;gap:6px}
+  .ivo{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px 3px 4px;font-size:12px;font-weight:700;cursor:pointer;color:var(--ink)}.ivo:hover{border-color:var(--accent)}
+  .ivo .badge{width:22px;height:22px;font-size:9px}
+  .ivdp td{vertical-align:middle;font-size:13px}
+  /* battle matrix */
+  .mxgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
+  .mxg{display:grid;gap:10px;align-content:start}
+  .mxgh{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .mxgh h3{font-size:18px}.mxgh h3 small{font-family:var(--body);font-size:12px;color:var(--muted);font-weight:400;margin-left:4px}
+  .mxcnt{font-size:13px;color:var(--muted)}.mxcnt.full{color:var(--loss);font-weight:700}
+  .mxg .controls{margin:0}
+  .mximp summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--accent)}
+  .mximp textarea{width:100%;font-family:var(--mono);font-size:12px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0;resize:vertical}
+  .mxlist{max-height:380px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--sunk)}
+  .mxlist .empty{padding:14px}
+  .mxrow{border-bottom:1px solid var(--line);background:var(--surface)}.mxrow:last-child{border-bottom:0}
+  .mxrow.open{box-shadow:inset 3px 0 0 var(--accent)}
+  .mxr1{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-areas:"b n e x" "b s e x";column-gap:8px;align-items:center;padding:6px 8px}
+  .mxr1 .badge{grid-area:b}.mxr1 .mxnm{grid-area:n;font-weight:700;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mxr1 .mxsub{grid-area:s;display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11px;color:var(--muted);min-width:0}
+  .mxr1 [data-edit]{grid-area:e;font-size:12px}.mxr1 .mxx{grid-area:x}
+  .mxiv.cust{color:var(--accent);font-weight:700}
+  .mxiv.over,.overw{color:var(--loss)!important;font-weight:700}
+  .mxx{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}.mxx:hover{color:var(--loss);background:var(--loss-soft)}
+  .mxed{padding:4px 10px 10px 44px;display:grid;gap:8px}
+  .mxed .mvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}
+  .mxed .mvs label{display:grid;gap:2px;font-size:11px;color:var(--muted)}.mxed .mvs select{width:100%;color:var(--ink)}
+  @media (max-width:640px){.mxed{padding-left:10px}}
+  table.mxsh th.hl{font-weight:700}
+  .mxivs{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+  .mxivs label{display:grid;gap:2px;font-size:11px;color:var(--muted)}
+  .mxivs input{width:64px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-family:var(--mono)}
+  .mxlv{font-size:12px;color:var(--muted);padding-bottom:6px}.mxlv b{color:var(--ink)}
+  .mxrun{display:grid;gap:12px}
+  .mxctl{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+  .mxgo{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  .mxgo .btn{padding:9px 18px;font-size:15px}
+  .mxprog{flex:1;min-width:140px;height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .mxprog i{display:block;height:100%;background:var(--accent);transition:width .15s}
+  .mxres.stale{opacity:.45;pointer-events:none}
+  .mxopt{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center}.mxoptn{font-size:12px;color:var(--muted);flex-basis:100%}
+  .mxoptb{background:var(--win-soft);color:var(--win);border-radius:8px;padding:8px 12px;font-size:13px;margin:6px 0}
+  .mxresh{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:8px}
+  .mx{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:10px;background:var(--surface)}
+  .mxc{position:absolute;left:0;top:0;display:block}
+  .mxs{position:absolute;inset:0;overflow:auto;cursor:crosshair;-webkit-overflow-scrolling:touch}
+  .mxsp{pointer-events:none}
+  .mxtip{position:absolute;z-index:2;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12px;padding:6px 8px;border-radius:6px;max-width:170px;line-height:1.35;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  .mxtip .chip{margin-left:4px}
+  .mxdet{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px;display:grid;gap:8px}
+  .mxdh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-weight:700}.mxdh .vs{color:var(--muted);font-weight:400}.mxdh .mxx{margin-left:auto}
+  .mxdm{display:grid;gap:2px;font-size:12px;color:var(--muted)}
+  table.mxsh td.hc{min-width:72px;text-align:center;font-family:var(--mono)}table.mxsh td.hc small{opacity:.8}
+  table.mxsh td.sel{outline:2px solid var(--accent);outline-offset:1px}
+  table.mxsh th.hh{font-size:11px;min-width:72px}
+  .mxfl{margin:8px 0}.mxfl input[type=search]{min-width:min(200px,60vw)}.mxshown{font-size:12px;color:var(--muted)}.mxst tr.hit td{background:var(--accent-soft)}
+  .mxfind{margin-top:10px}
+  .mxst td{vertical-align:middle}.mxsub2{font-size:11px;color:var(--muted)}
+  .mxst th .link[aria-pressed="true"]{text-decoration:underline;color:var(--ink)}
+  .bv{font-weight:700;padding:0 4px;border-radius:4px}
+  .bv.good{color:var(--win);background:var(--win-soft)}
+  .bv.ok{color:var(--accent);background:var(--accent-soft)}
+  .bv.bad{color:var(--loss);background:var(--loss-soft)}
+  .readout{border-left:3px solid var(--accent);background:var(--sunk);border-radius:0 8px 8px 0;padding:10px 12px;margin:10px 0 4px;display:grid;gap:6px;font-size:14px}
+  .readout p{margin:0}
+  table.hm td.ansn{font-family:var(--mono);font-weight:700;text-align:center;border-radius:6px;min-width:44px}
+  table.hm td.ansn.a0{background:var(--loss-soft);color:var(--loss)}
+  table.hm td.ansn.a1{background:var(--accent-soft);color:var(--accent)}
+  table.hm td.ansn.a2{background:var(--win-soft);color:var(--win)}
+  .thrp .trh{margin-top:14px}
+  .ans .num small.g2{font-size:11px;color:var(--muted);font-weight:400}
+}
+@keyframes gsRise{from{opacity:0;transform:translateY(8px)}}
+@keyframes gsFade{from{opacity:0}}
+@keyframes gsGrow{from{transform:scaleX(0)}}
+@keyframes gsGrowY{from{transform:scaleY(0)}}
+@keyframes gsDraw{to{stroke-dashoffset:0}}
+@keyframes gsPop{from{opacity:0;transform:translate(-50%,-50%) scale(.3)}}
+@keyframes gsFlip{0%{transform:scale(1.3);box-shadow:0 0 0 4px var(--fc,var(--accent))}60%{box-shadow:0 0 0 3px var(--fc,var(--accent))}100%{transform:scale(1);box-shadow:0 0 0 0 transparent}}
+/* ---- type bars, bring, key */
+.tbars{display:inline-flex;flex-wrap:wrap;gap:3px;vertical-align:middle}
+.tbars .typechip{font-size:9px;padding:1px 7px 1px 2px;letter-spacing:.05em}
+.tbars .typechip img{width:12px;height:12px}
+.badge .tics{display:none}
+.ans .badge .tics{display:flex;right:-5px;bottom:-2px}
+.ans .badge .tics img{width:9px;height:9px;margin-left:-3px}
+.ans .nm>.mon{margin-bottom:3px}
+.bring{display:flex;flex-wrap:wrap;gap:12px 16px;margin-bottom:14px}
+.bmon{display:flex;align-items:center;gap:10px;background:var(--sunk);border:1px solid var(--line);border-radius:14px;padding:8px 14px 8px 8px;min-width:0}
+.bmon small{display:block;font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.bmon b{display:block;font-family:var(--display);font-size:17px;margin-bottom:3px}
+table.hm th.ht{min-width:78px;vertical-align:bottom;padding:0 2px 6px}
+table.hm th.ht .hn2{display:block;font-weight:700;font-size:12px;color:var(--ink);margin-bottom:3px;white-space:normal;line-height:1.2}
+table.hm th.ht .tbars{flex-direction:column;align-items:center}
+.hrow2{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+.hrow2 b{font-size:13px}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px 24px;margin-top:12px}
+.mkey h4{margin:0 0 6px;font-family:var(--display);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mkr{display:grid;grid-template-columns:minmax(120px,170px) minmax(0,1fr);gap:4px 12px;padding:7px 0;border-top:1px solid var(--line);font-size:13px;align-items:center}
+.mkn{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.mkm .sep{color:var(--muted);margin:0 6px}
+@media (max-width:640px){.mkr{grid-template-columns:1fr}table.hm th.ht{min-width:64px}table.hm th.ht .hn2{font-size:11px}.bmon{flex:1 1 100%}}
+/* ---- tester editor + GBL rate */
+details.pvedit{padding:12px 14px}
+details.pvedit>summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;list-style:none}
+details.pvedit>summary::-webkit-details-marker{display:none}
+details.pvedit>summary::before{content:'▸';color:var(--accent);font-weight:700}
+details.pvedit[open]>summary::before{content:'▾'}
+.pvh{font-family:var(--display);font-weight:700;font-size:18px}
+.pvsum{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:13px;font-weight:700}
+.pvm{display:inline-flex;align-items:center;gap:5px}
+.pvnote{font-size:12px;color:var(--muted);flex-basis:100%}
+details.pvedit[open] .pvsum{display:none}
+details.pvedit .labslots{margin-top:12px}
+.ratecta{display:grid;gap:10px;justify-items:start;border:2px solid var(--accent)}
+#g3RateBtn[disabled]{opacity:.45;cursor:not-allowed}
+.gl-short{display:none}
+@media (max-width:640px){.gl-long{display:none}.gl-short{display:inline}}
+/* ---- build a regional team */
+details.rtb{padding:12px 14px}
+details.rtb>summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;list-style:none}
+details.rtb>summary::-webkit-details-marker{display:none}
+details.rtb>summary::before{content:'▸';color:var(--accent);font-weight:700}
+details.rtb[open]>summary::before{content:'▾'}
+.rtlist{display:grid;gap:6px;margin-top:10px;max-height:420px;overflow-y:auto;padding-right:4px}
+.rtrow{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:4px 14px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}
+.rtrow:hover,.rtrow:focus-visible{border-color:var(--accent);background:var(--accent-soft)}
+.rtrow .rtp b{display:block;font-size:15px}
+.rtrow .rtp small{color:var(--muted);font-size:12px}
+.rtrow .rtm{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}
+.rtmore{justify-self:start}
+@media (max-width:640px){.rtrow{grid-template-columns:1fr}}
+/* ---- learn / quizzes */
+.qcard{display:grid;gap:14px}
+.qscore{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);align-items:center}
+.qprompt{display:grid;gap:8px;justify-items:start}
+.qk{font-family:var(--display);font-weight:700;font-size:20px}
+.qvs{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.qvs .typechip{font-size:15px;padding:5px 14px 5px 5px}.qvs .typechip img{width:24px;height:24px}
+.qarrow{font-family:var(--display);font-weight:700;color:var(--muted);font-size:18px}
+.qmon b{font-family:var(--display);font-size:20px}
+.qhid{font-size:12px;color:var(--muted);border:1px dashed var(--line);border-radius:999px;padding:2px 10px}
+.qopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}
+.qopt{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);font-weight:700;cursor:pointer;text-align:center}
+.qopt:hover:not([disabled]){border-color:var(--accent);background:var(--accent-soft)}
+.qopt[disabled]{cursor:default;opacity:.55}
+.qopt.right{opacity:1;border-color:var(--win);background:var(--win-soft);color:var(--win)}
+.qopt.wrong{opacity:1;border-color:var(--loss);background:var(--loss-soft);color:var(--loss)}
+.qopt .typechip{font-size:12px}
+.qfb{border-radius:10px;padding:10px 14px;font-size:14px;line-height:1.7}
+.qfb.ok{background:var(--win-soft)}.qfb.no{background:var(--loss-soft)}
+.qfb .xt{display:inline-flex;align-items:center;gap:3px;margin:2px 4px 2px 0}.qfb .xt small{font-family:var(--mono);font-size:11px}
+.wwvs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:center;width:100%}
+.wwside{display:flex;gap:10px;align-items:center;min-width:0}.wwside b{display:block;font-family:var(--display);font-size:17px;margin-bottom:3px}
+.wwmv{font-size:12px;margin-top:4px}
+.wwall{display:flex;flex-wrap:wrap;gap:4px 14px;margin:6px 0}
+.wwwhy p{margin:4px 0;font-size:13px}.wwc{color:var(--muted)}
+.mcq{font-size:16px}
+.mcsteps{margin:6px 0 0;padding-left:20px;font-size:13px}
+.mcref{display:grid;gap:10px;margin-top:10px}
+.mcr{border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.mcn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:6px}.mcn small{color:var(--muted)}
+.mct{border-collapse:collapse;font-size:13px;display:block;overflow-x:auto;max-width:100%}
+.mct th,.mct td{padding:5px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line)}
+.mct th small{display:block;color:var(--muted);font-size:11px;font-weight:400}
+.mct td{font-size:14px}
+details.tref>summary{cursor:pointer;font-weight:700;color:var(--accent)}
+@media (max-width:640px){.wwvs{grid-template-columns:1fr}.wwvs .qarrow{justify-self:center}.qk{font-size:18px}}
+.qprog{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-size:13px;color:var(--muted)}
+.qprog .pbar{flex:1;min-width:120px;max-width:320px;height:8px;border-radius:4px;background:var(--sunk);overflow:hidden}
+.qprog .pbar i{display:block;height:100%;background:var(--win);transition:width .4s}
+.qlap{margin:0;font-weight:700;color:var(--win)}
+/* ---- teammate cards */
+.mates{display:grid;gap:10px}
+.mate{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.mhead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.mt b{display:block;font-family:var(--display);font-size:17px}
+.mt small{display:block;font-size:12px;margin-top:3px;color:var(--muted)}
+.mr{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.mstr{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;border:1px solid var(--line)}
+.mstr.hi{color:var(--win);border-color:var(--win)}.mstr.mid{color:var(--muted)}.mstr.lo{color:var(--even);border-color:var(--even)}
+.mwhy{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px;font-size:13px}
+.mwhy li{padding-left:18px;position:relative}
+.mwhy li::before{position:absolute;left:0;top:0;font-weight:700}
+.mwhy li.g::before{content:'⇢';color:var(--win)}.mwhy li.b::before{content:'⇠';color:var(--accent)}.mwhy li.m::before{content:'✓';color:var(--win)}.mwhy li.bad::before{content:'!';color:var(--loss)}
+.mwhy li.bad{color:var(--loss)}
+details.formcmp{margin-top:8px;border-top:1px dashed var(--line);padding-top:6px;font-size:13px}
+details.formcmp summary{cursor:pointer;font-weight:700;color:var(--accent)}
+details.formcmp summary span{font-weight:400;color:var(--muted);margin-left:6px}
+details.formcmp p{margin:6px 0;color:var(--muted)}
+.fcells{display:grid;gap:3px}.fcells i{font-style:normal;font-size:11px;font-weight:700;border-radius:999px;padding:1px 6px;margin-left:4px}
+.fcells i.up{background:var(--even-soft);color:var(--even)}.fcells i.dn{background:var(--accent-soft);color:var(--accent)}
+.fsim{font-size:11px}
+@media (max-width:640px){.mhead{grid-template-columns:auto minmax(0,1fr)}.mr{grid-column:1/-1;justify-content:flex-start}}
+.fitt td.fbp{font-size:13px;white-space:nowrap;padding:0 10px}.fitt td.fbp small{margin-left:6px;color:var(--muted)}
+.fitt td.hc{min-width:56px}
+.trh{margin:6px 0 4px;font-family:var(--display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.trios{display:flex;flex-wrap:wrap;gap:6px}
+.trio{font-size:12px;border-radius:8px;padding:4px 8px;display:inline-flex;gap:8px;align-items:center}
+.trio b{font-size:11px}
+</style>
+<header class="top">
+ <div class="band"><div class="wrap bandin">
+  <div class="brand"><svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="5" width="38" height="38" rx="9" fill="none" stroke="#7398FF" stroke-width="3"/><text x="24" y="27" text-anchor="middle" font-family="Chakra Petch, Arial Narrow, sans-serif" font-weight="700" font-size="16" fill="#E7EBF3">GL</text><text x="24" y="37" text-anchor="middle" font-family="Chakra Petch, Arial Narrow, sans-serif" font-weight="700" font-size="7" fill="#7398FF" letter-spacing="1">CORE</text></svg>
+   <div class="brandtxt"><h1>GL <b>Core</b> Scout</h1><span class="sub" id="sub"></span></div>
+   <label class="langpick" for="langSel"><span class="vh">Language</span><select id="langSel" aria-label="Language / Idioma / 言語"><option value="en">English</option><option value="es">Español</option><option value="ja">日本語</option></select></label></div>
+  <nav class="groups" aria-label="Sections"><button class="gbtn" data-g="home" id="g-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></button><button class="gbtn" data-g="meta" id="g-meta"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h3v10zM10.5 20V4h3v16zM17 20v-7h3v7z"/></svg><span>Meta</span></button><button class="gbtn" data-g="build" id="g-build"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM15.5 13h2v3h3v2h-3v3h-2v-3h-3v-2h3z"/></svg><span>Build</span></button><button class="gbtn" data-g="battle" id="g-battle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zM12 5.2L7 7v4c0 3.3 2 6.2 5 7.8z"/></svg><span class="gl-long">GBL Team Builder</span><span class="gl-short">GBL</span></button><button class="gbtn" data-g="sim" id="g-sim"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" fill-opacity=".35"/><path d="M14 14h7v7h-7zM3 3h7v7H3z"/></svg><span>Battle</span></button><button class="gbtn" data-g="learn" id="g-learn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4L1 9l11 5 9-4.1V16h2V9zM5 12.2V16c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2z"/></svg><span>Learn</span></button></nav>
+ </div></div>
+ <div class="wrap subbar">
+  <nav class="tabs" role="tablist" aria-label="Pages">
+    <button role="tab" data-v="home" id="t-home" hidden>Home</button>
+    <button role="tab" data-v="cores" id="t-cores">Meta cores</button>
+    <button role="tab" data-v="trends" id="t-trends">Trends</button>
+    <button role="tab" data-v="teams" id="t-teams">Team directory</button>
+    <button role="tab" data-v="answers" id="t-answers">Anti-meta</button>
+    <button role="tab" data-v="build" id="t-build">Find Your Pokémon</button>
+    <button role="tab" data-v="lab" id="t-lab">Pokémon Analysis</button>
+    <button role="tab" data-v="team" id="t-team">Team Building</button>
+    <button role="tab" data-v="preview" id="t-preview">Regional Team Tester</button>
+    <button role="tab" data-v="gbl" id="t-gbl">GBL team builder</button>
+    <button role="tab" data-v="matrix" id="t-matrix">Battle matrix</button>
+    <button role="tab" data-v="sandbox" id="t-sandbox">Battle sandbox</button>
+    <button role="tab" data-v="ivs" id="t-ivs">Best IVs</button>
+    <button role="tab" data-v="types" id="t-types">Type quiz</button>
+    <button role="tab" data-v="whowins" id="t-whowins">Who wins?</button>
+    <button role="tab" data-v="counts" id="t-counts">Move counts</button>
+    <button role="tab" data-v="about" id="t-about">How it works</button>
+  </nav>
+  <details class="setdet" id="setDet"><summary><span class="sumlab">Settings</span> <span id="setSum"></span></summary>
+  <div class="setbar">
+    <span>Shields</span><div class="seg" role="group" aria-label="Shield scenario"><button id="sh-avg" aria-pressed="true">Average</button><button id="sh-0" aria-pressed="false">0–0</button><button id="sh-1" aria-pressed="false">1–1</button><button id="sh-2" aria-pressed="false">2–2</button></div>
+    <label for="marginSel">Close if within <select id="marginSel"><option value="50">50</option><option value="75" selected>75</option><option value="100">100</option></select> of 500</label>
+    <label for="antiSel">Anti-meta pool <select id="antiSel"><option value="-0.2">net −20% or better</option><option value="-0.1">net −10% or better</option><option value="0">net 0% or better</option></select></label>
+    <span id="setNote" style="color:var(--muted);font-style:italic"></span><span class="legend"><span class="chip W">W</span>win <span class="chip CW">CW</span>close win <span class="chip CL">CL</span>close loss <span class="chip L">L</span>loss</span>
+  </div>
+  </details>
+ </div>
+</header>
+
+<main class="wrap">
+<section class="view" id="v-home" hidden>
+  <div class="hero"><h2 id="homeTitle">Your Great League scouting desk</h2><p class="lede" id="homeLede">Everything from the 2027 regionals in one place: what's being played, what wins, and tools to build and practise your own teams.</p></div>
+  <div class="kpis" id="homeKpis"></div>
+  <div class="ctas">
+    <button class="cta" data-go="gbl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5zM12 5.2L7 7v4c0 3.3 2 6.2 5 7.8z"/></svg><b>Build a GBL team</b><span>Pick the Pokémon you want to play and find its best partners.</span></button>
+    <button class="cta" data-go="team"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM15.5 13h2v3h3v2h-3v3h-2v-3h-3v-2h3z"/></svg><b>Check my team</b><span>See which cores your six answer and get suggestions.</span></button>
+    <button class="cta" data-go="teams"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h3v10zM10.5 20V4h3v16zM17 20v-7h3v7z"/></svg><b>Scout a regional team</b><span>Browse all regional teams and analyse any of them.</span></button>
+    <button class="cta" data-go="matrix"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 14h7v7h-7zM3 3h7v7H3z"/><path d="M3 14h7v7H3zM14 3h7v7h-7z" fill-opacity=".35"/></svg><b>Battle matrix</b><span>Any group against any group, up to 300 each, with your own IVs and shields. Exports to Excel.</span></button>
+    <button class="cta" data-go="types"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4L1 9l11 5 9-4.1V16h2V9zM5 12.2V16c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8l-7 3.2z"/></svg><b>Learn with quizzes</b><span>Type matchups, who wins and fast-move counts for the regional meta.</span></button>
+  </div>
+  <div class="cols">
+    <div class="card"><h3 class="ch">Most used Pokémon</h3><div id="homeTop"></div><button class="link" data-go="cores">See meta cores</button></div>
+    <div class="card"><h3 class="ch" id="homeRiseH">Rising</h3><div id="homeRise"></div><button class="link" data-go="trends">See all trends</button></div>
+  </div>
+  <div class="cols">
+    <div class="card"><h3 class="ch">Best-converting duos</h3><div id="homeConv"></div><button class="link" data-go="cores">See all cores</button></div>
+    <div class="card"><h3 class="ch" id="homeWinH">Latest winner</h3><div id="homeWin"></div></div>
+  </div>
+</section>
+
+<section class="view" id="v-cores" hidden>
+  <p class="lede">The duos and trios players built around at the 2027 regionals, and what answers them. Tap a core for its answers, the moves they resist and a counter duo or trio. Tap any answer to see its rating at each shield count.</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Core size"><button id="cs-2" aria-pressed="true">Duos</button><button id="cs-3" aria-pressed="false">Trios</button></div>
+    <div class="seg" role="group" aria-label="Sort"><button id="co-common" aria-pressed="true">Most common</button><button id="co-conv" aria-pressed="false">Best converting</button></div>
+    <label class="fld" id="minwrap" for="minN">Min teams <input type="range" id="minN" min="3" max="20" value="8"><span class="num" id="minVal">8</span></label>
+    <label class="fld" id="adjwrap" for="adjS"><input type="checkbox" id="adjS" checked> Adjust for sample size</label>
+    <label class="fld" for="coreQ">Contains <input type="search" id="coreQ" list="metaNames" placeholder="Any Pokémon"></label>
+  </div>
+  <div class="list" id="coreList"></div>
+</section>
+
+<section class="view" id="v-trends" hidden>
+  <p class="lede">What's rising and falling from event to event. Bars show the share of each event's teams that ran the Pokémon or core; the counts show teams / Day 2 teams per event.</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="What to show"><button id="tk-mon" aria-pressed="true">Pokémon</button><button id="tk-duo" aria-pressed="false">Duos</button><button id="tk-tri" aria-pressed="false">Trios</button></div>
+    <div class="seg" role="group" aria-label="Sort"><button id="ts-rise" aria-pressed="true">Rising</button><button id="ts-fall" aria-pressed="false">Falling</button><button id="ts-n" aria-pressed="false">Most used</button></div>
+  </div>
+  <div class="card grid chartbox" id="trChart"></div>
+  <p class="lede" id="trNote" style="font-size:13px"></p>
+  <div class="tblwrap"><table class="vt"><thead><tr><th>#</th><th>Pokémon / core</th><th class="r">Teams</th><th>Share by event</th><th>Teams / Day 2</th><th class="r">Latest vs earlier</th><th></th></tr></thead><tbody id="trBody"></tbody></table></div>
+  <div class="card grid" id="trScat"></div>
+</section>
+
+<section class="view" id="v-teams" hidden>
+  <p class="lede">Every team registered at the 2027 regionals, with the moves each player actually ran. Tap a team for its analysis: cores it answers, problem matchups, shared weaknesses and its best three to bring.</p>
+  <div class="controls">
+    <label class="fld" for="tdEv">Event <select id="tdEv"></select></label>
+    <label class="fld" for="tdD2"><input type="checkbox" id="tdD2"> Day 2 only</label>
+    <label class="fld" for="tdQ">Player or Pokémon <input type="search" id="tdQ" placeholder="Search"></label>
+    <label class="fld" for="tdSort">Sort <select id="tdSort"><option value="place">By placement</option><option value="event">By event</option></select></label>
+    <span class="num" id="tdCount" style="color:var(--muted)"></span>
+  </div>
+  <div class="list" id="tdList"></div>
+</section>
+
+<section class="view" id="v-lab" hidden>
+  <p class="lede">Change movesets and watch matchups, coverage and counters shift. Each Pokémon starts on its most-used regional moveset; anything you change is outlined and compared against that default.</p>
+  <div class="hint" id="labHint"></div>
+  <div class="labslots" id="labSlots"></div>
+  <div class="controls"><button class="btn ghost" id="labAdd">+ Add Pokémon</button><button class="link" id="labReset">Reset all moves to default</button><button class="link" id="labToTeam">Save to Team Building</button></div>
+  <div id="labOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-build" hidden>
+  <div class="controls"><label class="fld" for="bQ">Pokémon <input type="text" id="bQ" list="metaNames" value="Melmetal" autocomplete="off"></label>
+  <div class="seg" role="group" aria-label="Cores shown"><button id="bs-0" aria-pressed="true">Duos &amp; trios</button><button id="bs-2" aria-pressed="false">Duos</button><button id="bs-3" aria-pressed="false">Trios</button></div>
+  <div class="seg" role="group" aria-label="Sort cores"><button id="bo-n" aria-pressed="true">Teams</button><button id="bo-r" aria-pressed="false">Day 2 rate</button></div></div>
+  <div id="bOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-answers" hidden>
+  <p class="lede">Who goes close or better against the most cores. Every Pokémon is checked against each duo and trio core used on 5+ regional teams, weighted by how many teams ran that core. "Covered" means no clear loss to any member (close losses count as covered). "Beaten" means a clear win against every member.</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Pool"><button id="ap-all" aria-pressed="true">All</button><button id="ap-meta" aria-pressed="false">In the meta</button><button id="ap-anti" aria-pressed="false">Anti-meta only</button></div>
+    <label class="fld" for="aQ">Find <input type="search" id="aQ" placeholder="Pokémon name"></label>
+  </div>
+  <div class="tblwrap"><table class="vt"><thead><tr><th>#</th><th>Pokémon</th><th>Pool</th><th class="r">Regional teams</th><th class="r" title="Wins minus losses vs the regional meta, weighted by use">Net vs meta</th><th class="r">Core teams covered</th><th class="r">Cores beaten outright</th><th></th></tr></thead><tbody id="aBody"></tbody></table></div>
+</section>
+
+<section class="view" id="v-team" hidden>
+  <p class="lede">Your team, with the movesets you actually run. Fill some slots and get suggestions for the rest, or check a full six for gaps and better swaps. Starts with the team from your Team_Builder sheet.</p>
+  <details class="card rtb" id="rtb"><summary><span class="pvh">Build a regional team</span><span class="pvnote">Search the 355 regional teams and tap a player to load their six, with the moves they actually ran.</span></summary>
+    <div class="controls" style="margin-top:10px">
+      <label class="fld" for="rtEv">Event <select id="rtEv"></select></label>
+      <label class="fld" for="rtD2"><input type="checkbox" id="rtD2"> Day 2 only</label>
+      <label class="fld" for="rtQ" style="flex:1">Player or Pokémon <input type="search" id="rtQ" placeholder="Search" style="flex:1;min-width:min(200px,100%)"></label>
+      <span class="num" id="rtCount" style="color:var(--muted)"></span>
+    </div>
+    <div class="rtlist" id="rtList"></div>
+  </details>
+  <div class="labslots" id="teamSlots"></div>
+  <div class="controls"><button class="btn ghost" id="teamToLab">Open in Pokémon Analysis</button><button class="link" id="teamReset">Reset to example team</button><button class="link" id="teamClear">Clear all</button></div>
+  <details class="imp"><summary>Load a shared team</summary><div class="controls"><input type="text" id="impQ" placeholder="Paste a team link or code" style="flex:1;min-width:min(260px,100%)"><button class="btn ghost" id="impGo">Load</button></div></details>
+  <div id="teamOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-preview" hidden>
+  <p class="lede">Regional Team Tester: your six (from Team Building, with your movesets) against an opponent's six. Pick any real regional team, which uses their actual registered moves, or type one in. You get the three to bring, who leads, who to swap to and who closes.</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Opponent source"><button id="om-real" aria-pressed="true">Real regional team</button><button id="om-custom" aria-pressed="false">Type a team</button></div>
+    <div id="opReal" class="controls"><label class="fld" for="opTeamQ">Opponent <input type="search" id="opTeamQ" list="teamNames" style="min-width:min(320px,70vw)" placeholder="Event #place player"></label><button class="link" id="opRandom">Random Day 2 team</button></div>
+  </div>
+  <div id="opCustom" class="teamgrid" hidden></div>
+  <details class="card pvedit" id="pvEdit" open><summary><span class="pvh">Your team</span><span class="pvsum" id="pvSum"></span><span class="pvnote">Changes here update Team Building too.</span></summary><div class="labslots" id="pvSlots"></div></details>
+  <div id="pvOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-gbl" hidden>
+  <p class="lede">Go Battle League: three Pokémon, no team preview. Put in the Pokémon you want to play, get the partners that suit it best, then rate the trio to see how it does and the order to play it.</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="3v3 section" id="g3SubSeg"><button id="g3-sug" aria-pressed="true">Find partners</button><button id="g3-rate" aria-pressed="false">Trio rater</button></div>
+    <div class="seg" role="group" aria-label="Opponents"><button id="gm-gbl" aria-pressed="true">GBL meta</button><button id="gm-reg" aria-pressed="false">Regional meta</button></div>
+  </div>
+  <div class="labslots" id="g3Slots"></div>
+  <div class="controls" id="g3SlotBar"><button class="btn" id="g3RateBtn" disabled>Rate this trio</button><button class="link" id="g3FromTeam">Use first three from Team Building</button><button class="link" id="g3Clear">Clear</button></div>
+  <div id="g3Out" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-matrix" hidden>
+  <p class="lede">Battle matrix: every Pokémon in Group A battles every Pokémon in Group B, the same way PvPoke's matrix works. Up to 300 per group, shields set separately for each side, your own IVs, and a download that opens in Excel. Groups import and export in PvPoke's format, so you can copy them between the two sites.</p>
+  <div class="mxgroups"><div class="card mxg" id="mxgA"></div><div class="card mxg" id="mxgB"></div></div>
+  <div class="card mxrun" id="mxRun"></div>
+  <div id="mxOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-sandbox" hidden>
+  <p class="lede">Battle sandbox: one matchup where you control every input. Change moves, IVs, shields, starting HP, starting energy and stat stages, or turn shield baiting off, and the battle re-runs straight away with a turn-by-turn breakdown.</p>
+  <div class="controls"><label class="fld" for="sbCap">Level cap <select id="sbCap"><option value="40">40</option><option value="41">41</option><option value="50">50</option><option value="51">51 (best buddy)</option></select></label><button class="link" id="sbFromTeam">Use my first Team Building Pokémon</button></div>
+  <div class="sbin" id="sbIn"></div>
+  <div id="sbOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-ivs" hidden>
+  <p class="lede">Best IVs: search a Pokémon to rank its IV spreads by how they actually battle against the regional meta, not just by stat product. You get the top 200 with CP, stats, stat product, average rating and wins, the matchups each spread flips compared with PvPoke's default IVs, and which matchups your IVs can never change. Ultra League shows stat product ranks.</p>
+  <div id="ivIn"></div>
+  <div id="ivOut" style="display:grid;gap:16px;margin-top:16px"></div>
+</section>
+
+<section class="view" id="v-types" hidden>
+  <p class="lede">Learn the type chart one question at a time. Pokémon GO uses its own numbers: super effective ×1.6, not very effective ×0.625, double resisted ×0.39.</p>
+  <div class="controls"><div class="seg" role="group" aria-label="Quiz type"><button id="tq-atk" aria-pressed="true">Attack vs type</button><button id="tq-res" aria-pressed="false">What resists it?</button><button id="tq-mon" aria-pressed="false">Meta Pokémon weaknesses</button></div>
+  <label class="fld" id="tqShowWrap" for="tqShow"><input type="checkbox" id="tqShow" checked> Show the Pokémon's types</label></div>
+  <div id="tqOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-whowins" hidden>
+  <p class="lede">Two meta Pokémon on their usual moves: who wins? Answers come from the same battle simulator the rest of the site uses, with the reasons and fast-move counts after each answer.</p>
+  <div class="controls"><div class="seg" role="group" aria-label="Pokémon pool"><button id="wp-reg" aria-pressed="true">Top regional meta</button><button id="wp-gbl" aria-pressed="false">PvPoke GBL top 100</button></div>
+  <div class="seg" role="group" aria-label="Shields"><button id="ws-0" aria-pressed="true">0v0</button><button id="ws-1" aria-pressed="false">1v1</button><button id="ws-2" aria-pressed="false">2v2</button><button id="ws-mix" aria-pressed="false">Mixed</button></div></div>
+  <div id="wwOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-counts" hidden>
+  <p class="lede">Fast-move counts for every moveset played at the regionals: how many fast moves until each charged move, including the repeating pattern once leftover energy carries over (Clodsire's Poison Sting into Earthquake is 8-7-7-7).</p>
+  <div class="controls"><div class="seg" role="group" aria-label="Pokémon pool"><button id="mp-top" aria-pressed="true">Top 30 regional Pokémon</button><button id="mp-all" aria-pressed="false">All regional Pokémon</button></div><label class="fld" for="mcFocus">Or practise one Pokémon <input type="text" id="mcFocus" list="metaNames" placeholder="e.g. Corviknight" autocomplete="off"></label><button class="link" id="mcFocusClear">Clear</button></div>
+  <div id="mcOut" style="display:grid;gap:16px"></div>
+  <div class="card grid"><h3 style="font-size:18px;margin-bottom:4px">Move counts reference</h3><p class="lede" style="font-size:13px">Every regional meta Pokémon with the moves players ran. Each cell is the count to the 1st, 2nd, 3rd and 4th charged move in a row; "e" is energy and "t" is turns (half a second each).</p>
+  <label class="fld" for="mcQ">Find <input type="search" id="mcQ" placeholder="Pokémon name"></label>
+  <div id="mcRef" class="mcref"></div></div>
+</section>
+
+<section class="view prose" id="v-about" hidden>
+<div data-lang="en" data-noi18n>
+  <h2>How it works</h2>
+  <p><b>Data.</b> Every registered team from the Baltimore, Frankfurt, Brisbane and Recife regionals (from Dracoviz), <span id="aboutN"></span>. A core is any pair or trio that appeared together on a team. Conversion is the core's Day 2 rate divided by the field average, so above 1 means it over-performed. Small samples swing a lot, which is why best-converting lists have a minimum team count.</p>
+  <p><b>Matchups.</b> Each meta Pokémon uses its most-used regional moveset. Every Great League-eligible Pokémon (with PvPoke's recommended moveset) was battled against all 255 meta builds at 0, 1 and 2 shields with PvPoke's own battle engine, so typing, resisted moves, stats, energy, shield baiting, move timing and form changes all work exactly as on PvPoke.</p>
+  <p><b>Ratings and tiers.</b> A rating of 500 is a tie, 1000 a flawless win and 0 a flawless loss. A close result sits within the margin you pick at the top (50, 75 or 100 points, roughly 10–20% of HP either way). <span class="chip W">W</span> clear win, <span class="chip CW">CW</span> close win, <span class="chip CL">CL</span> close loss, <span class="chip L">L</span> clear loss. A close loss isn't a bad matchup: a shield, a bait or a better IV spread can flip it. Answers are ranked to avoid clear losses first and close losses second. "Average" uses the mean of the three shield scenarios; pick 0–0, 1–1 or 2–2 to see one scenario.</p>
+  <p><b>Anti-meta pool.</b> "Answers from the meta" are Pokémon on 3+ regional teams. "Anti-meta" answers are on fewer than 3 <i>and</i> pass your role-player rule: a net score of −20% or better against the regional meta (wins minus losses at 0, 1 and 2 shields, each opponent weighted by how many teams used it). That keeps about 300 of the 1,066 rarely used Pokémon. Tighten it to −10% (about 180) or 0% (about 85) with the selector at the top.</p>
+  <p><b>Pokémon Analysis.</b> When you change a move, the site re-runs the battles in your browser with the same simulator, so results are directly comparable with the defaults.</p>
+  <p><b>Regional teams.</b> All 355 teams with each player's actual moves. A team's analysis uses those moves: cores answered, the most-used Pokémon nobody on it beats, shared weaknesses, and the three of its six that cover the regional meta best.</p>
+  <p><b>GBL team builder.</b> Put in the Pokémon you want to play and Find partners ranks every partner from the PvPoke top 300 (or the regional pool) by how much of the meta the trio then beats, with your shared-weakness rule. Go Battle League has no team preview, so trios are tested against the whole ladder meta: PvPoke's Great League top 300 from your rankings export, weighted by rank (#1 counts fully, #300 about a third), or the regional meta. Rate this trio then picks the lead with the best 2-shield results, the safe swap that covers the lead's losses at 1 shield and the closer with the best 0-shield results.</p>
+  <p><b>Accuracy.</b> Battles use PvPoke's own battle engine (open source, MIT licence, credited in the site's code). Checked against your PvPoke matrix exports, every one of 54,000 matchups at 0, 1 and 2 shields gives the identical rating. The IV searches first screen thousands of spreads with a faster simplified simulator (which agrees with PvPoke about 90–94% of the time) and then re-run everything they show with PvPoke's engine.</p>
+  <p><b>Samples and trends.</b> Day 2 rates come with a likely range (80% interval). Cores on fewer than 8 teams carry a small-sample badge. Best-converting lists are adjusted for sample size by default: each rate is pulled toward the field average by the equivalent of 10 average teams, so a 4-for-4 trio doesn't outrank a 7-for-12 one. Trends compare the latest event with all earlier events pooled.</p>
+  <p><b>Team Building and Regional Team Tester.</b> Suggestions score each candidate on cores answered, cores answered twice, wins against the most-used Pokémon (8+ teams) and your shared-weakness rule. The tester picks the three that hold up best against the opponent's best counter-trio, then picks the lead at 2 shields, the safe swap (covering the lead's bad matchups) at 1 and the closer at 0.</p>
+  <p><b>Battle matrix.</b> Runs PvPoke's battle engine in your browser, spread over several CPU cores; a full 300 × 300 run takes from several seconds to a minute depending on your device. Level and CP come from your IVs and the level cap (the highest level at or under 1,500 CP). The download has the same layout as PvPoke's matrix export, including the Wins, Losses, Draws and Average columns, and gives the same numbers.</p>
+  <p><b>Battle sandbox.</b> PvPoke's battle engine with its sandbox options: starting HP, starting energy, stat stages, and shield baiting (on is PvPoke's normal selective baiting; off never baits). With every condition at its default it gives exactly the matrix result. Breakpoints and bulkpoints recalculate the level for each IV under the level cap.</p>
+  <p><b>IV analysis and Best IVs.</b> Every IV spread gets its highest level at or under the CP cap, and stat product is Attack × Defense × HP (HP rounded down), as on pvpivs.com. To claim a result holds "whatever the IVs", the site battles the weakest spreads on one side against the strongest on the other: the stat frontiers, meaning the spreads no other spread beats (or undercuts) in Attack, Defense and HP together. That relies on better or equal stats never turning a win into a loss, which held in every test (9,779 checks with PvPoke's engine; ratings occasionally differ by a point from HP rounding). Best IVs battles each Pokémon's frontier spreads plus its 600 highest stat products against the chosen meta; the matrix's best-IV button searches each Pokémon's strongest spreads against the other group.</p>
+  <p><b>Updating.</b> New regionals go through the GL Core Scout kit: add the Dracoviz page to the kit's inputs, run it, and this site and the Team Builder workbook are both rebuilt.</p>
+</div>
+<div data-lang="es" data-noi18n hidden>
+  <h2>Cómo funciona</h2>
+  <p><b>Datos.</b> Todos los equipos registrados en los regionales de Baltimore, Frankfurt, Brisbane y Recife (de Dracoviz): {NT} equipos, {ND} de ellos en Día 2 ({BASE}). Un núcleo es cualquier pareja o trío que apareció junto en un equipo. La conversión es la tasa de Día 2 del núcleo dividida entre la media general: por encima de 1, rindió por encima de lo esperado. Las muestras pequeñas varían mucho, por eso las listas de mejor conversión tienen un mínimo de equipos.</p>
+  <p><b>Enfrentamientos.</b> Cada Pokémon del meta usa su set más usado en los regionales. Todos los Pokémon elegibles para la Liga Super Ball (con el set recomendado por PvPoke) combatieron contra las 255 configuraciones del meta con 0, 1 y 2 escudos con el propio motor de combate de PvPoke, así que los tipos, los ataques resistidos, las estadísticas, la energía, los cebos, el momento de los ataques y los cambios de forma funcionan exactamente como en PvPoke.</p>
+  <p><b>Puntuaciones y niveles.</b> Una puntuación de 500 es un empate, 1000 una victoria perfecta y 0 una derrota perfecta. Un resultado ajustado está dentro del margen que eliges arriba (50, 75 o 100 puntos, aproximadamente un 10–20% de PS). <span class="chip W">W</span> victoria clara, <span class="chip CW">CW</span> victoria ajustada, <span class="chip CL">CL</span> derrota ajustada, <span class="chip L">L</span> derrota clara. Una derrota ajustada no es un mal enfrentamiento: un escudo, un cebo o mejores IV pueden darle la vuelta. Las respuestas se ordenan evitando primero las derrotas claras y después las ajustadas. "Promedio" usa la media de los tres escenarios de escudos; elige 0–0, 1–1 o 2–2 para ver uno solo.</p>
+  <p><b>Grupo anti-meta.</b> Las "respuestas del meta" son Pokémon usados en 3+ equipos regionales. Las respuestas "anti-meta" se usaron en menos de 3 y además cumplen tu regla de rol: un saldo neto de −20% o mejor contra el meta regional (victorias menos derrotas con 0, 1 y 2 escudos, ponderando cada rival por cuántos equipos lo usaron). Eso deja unos 300 de los 1066 Pokémon poco usados. Puedes endurecerlo a −10% (unos 180) o 0% (unos 85) con el selector de arriba.</p>
+  <p><b>Análisis de Pokémon.</b> Cuando cambias un ataque, el sitio vuelve a simular los combates en tu navegador con el mismo simulador, así que los resultados son comparables con los de por defecto.</p>
+  <p><b>Creación de equipos y Probador de equipos regionales.</b> Las sugerencias puntúan cada candidato según los núcleos respondidos, los respondidos dos veces, las victorias contra los Pokémon más usados (8+ equipos) y tu regla de debilidades compartidas. El probador elige los tres que mejor aguantan contra el mejor trío counter del rival y después el abridor con 2 escudos, el cambio seguro (que cubre los malos enfrentamientos del abridor) con 1 y el cierre con 0.</p>
+  <p><b>Muestras y tendencias.</b> Las tasas de Día 2 incluyen un rango probable (intervalo del 80%). Los núcleos con menos de 8 equipos llevan la etiqueta de muestra pequeña. Las listas de mejor conversión se ajustan por tamaño de muestra: cada tasa se acerca a la media general con el peso de 10 equipos medios, para que un trío de 4 de 4 no supere a uno de 7 de 12. Las tendencias comparan el último evento con todos los anteriores juntos.</p>
+  <p><b>Equipos regionales.</b> Los 355 equipos con los ataques reales de cada jugador. El análisis usa esos ataques: núcleos respondidos, los Pokémon más usados que nadie del equipo vence, debilidades compartidas y los tres de sus seis que mejor cubren el meta regional.</p>
+  <p><b>Equipos para la GBL.</b> Pon el Pokémon que quieres usar y Buscar compañeros ordena cada compañero del top 300 de PvPoke (o del grupo regional) según cuánto del meta vence el trío, con tu regla de debilidades compartidas. La Liga de Combates GO no tiene vista previa de equipos, así que los tríos se prueban contra todo el meta de la liga: el top 300 de la Liga Super Ball de PvPoke de tu exportación, ponderado por posición (el n.º 1 cuenta entero, el n.º 300 cerca de un tercio), o el meta regional. Valorar este trío elige después el abridor con mejores resultados a 2 escudos, el cambio seguro que cubre sus derrotas a 1 escudo y el cierre con mejores resultados a 0.</p>
+  <p><b>Precisión.</b> Los combates usan el propio motor de combate de PvPoke (código abierto, licencia MIT, acreditado en el código del sitio). Comparado con tus exportaciones de PvPoke, los 54 000 enfrentamientos con 0, 1 y 2 escudos dan exactamente la misma puntuación. Las búsquedas de IV filtran primero miles de repartos con un simulador simplificado más rápido (que coincide con PvPoke un 90–94% de las veces) y después repiten con el motor de PvPoke todo lo que muestran.</p>
+  <p><b>Nombres.</b> Los nombres oficiales en español y japonés de Pokémon, ataques y tipos provienen de PokeAPI. Algunas formas poco comunes mantienen su nombre en inglés.</p>
+  <p><b>Matriz de combates.</b> Ejecuta el motor de combate de PvPoke en tu navegador, repartido entre varios núcleos; una matriz completa de 300 × 300 tarda desde unos segundos hasta un minuto según tu dispositivo. El nivel y los PC salen de tus IV y del nivel máximo (el nivel más alto con 1500 PC o menos). La descarga tiene el mismo formato que la exportación de la matriz de PvPoke, con las columnas Wins, Losses, Draws y Average, y da los mismos números.</p>
+  <p><b>Simulador libre.</b> El motor de combate de PvPoke con sus opciones de simulación: PS iniciales, energía inicial, cambios de estadísticas y cebo de escudos (activado es el cebo selectivo normal de PvPoke; desactivado nunca ceba). Con todas las condiciones por defecto da exactamente el resultado de la matriz. Los breakpoints y bulkpoints recalculan el nivel para cada IV con el nivel máximo.</p>
+  <p><b>Análisis de IV y Mejores IV.</b> Cada reparto de IV usa su nivel más alto con el límite de PC o menos, y el producto de estadísticas es Ataque × Defensa × PS (PS redondeado hacia abajo), como en pvpivs.com. Para afirmar que un resultado se mantiene "sean cuales sean los IV", el sitio enfrenta los repartos más débiles de un lado contra los más fuertes del otro: las fronteras de estadísticas, es decir, los repartos que ningún otro supera (o queda por debajo) en Ataque, Defensa y PS a la vez. Esto se basa en que unas estadísticas iguales o mejores nunca convierten una victoria en derrota, algo que se cumplió en todas las pruebas (9779 comprobaciones con el motor de PvPoke; a veces la puntuación varía un punto por el redondeo de PS). Mejores IV simula los repartos de la frontera de cada Pokémon y sus 600 mayores productos de estadísticas contra el meta elegido; el botón de mejores IV de la matriz busca entre los repartos más fuertes de cada Pokémon contra el otro grupo.</p>
+  <p><b>Actualización.</b> Los nuevos regionales se añaden con el kit GL Core Scout: añade la página de Dracoviz a las entradas del kit, ejecútalo, y este sitio y el libro Team Builder se regeneran.</p>
+</div>
+<div data-lang="ja" data-noi18n hidden>
+  <h2>仕組み</h2>
+  <p><b>データ。</b> ボルチモア、フランクフルト、ブリスベン、レシフェの各リージョナルに登録された全パーティ（Dracoviz より）。合計{NT}チーム、うちDay 2進出は{ND}チーム（{BASE}）。コアとは、同じパーティに入っていたペアまたはトリオのことです。進出倍率は、そのコアのDay 2進出率を全体平均で割った値で、1より大きければ平均以上の結果です。サンプルが少ないと大きくぶれるため、進出率順のリストには最小チーム数を設けています。</p>
+  <p><b>対面。</b> 環境の各ポケモンは、リージョナルで最も使われた技構成を使います。スーパーリーグに出せる全ポケモン（PvPoke推奨の技構成）を、環境の255構成とシールド0・1・2枚でPvPoke本体のバトルエンジンで対戦させたので、タイプ相性、半減技、ステータス、エネルギー、シールドの釣り、技のタイミング、フォルムチェンジがPvPokeと全く同じように反映されます。</p>
+  <p><b>評価と区分。</b> 評価値500は引き分け、1000は完勝、0は完敗です。「僅差」は上で選んだ幅（50・75・100、HPでおよそ10〜20%）以内の結果です。<span class="chip W">W</span> はっきり勝ち、<span class="chip CW">CW</span> 僅差勝ち、<span class="chip CL">CL</span> 僅差負け、<span class="chip L">L</span> はっきり負け。僅差負けは悪い対面ではありません。シールド、ベイト、個体値で覆せます。対策は、はっきり負けを最優先で避け、次に僅差負けを避ける順で並べています。「平均」はシールド3パターンの平均で、0対0・1対1・2対2を選ぶとそれぞれ単独で表示します。</p>
+  <p><b>アンチメタ候補。</b> 「環境内の対策」はリージョナルで3チーム以上に使われたポケモンです。「アンチメタの対策」は3チーム未満で、さらにあなたの役割ルール（リージョナル環境に対する収支が −20% 以上：シールド0・1・2枚での勝ち数−負け数を、相手の使用チーム数で重み付け）を満たすものです。これで、あまり使われていない1066体のうち約300体が残ります。上の選択肢で −10%（約180体）や 0%（約85体）に絞れます。</p>
+  <p><b>ポケモン分析。</b> 技を変えると、同じシミュレーターでブラウザ内でバトルを再計算するので、元の結果とそのまま比べられます。</p>
+  <p><b>パーティ構築とリージョナルチームテスト。</b> 提案は、対策できるコア、2体で対策できるコア、使用数上位（8チーム以上）への勝ち、共通弱点ルールで各候補を採点します。テストでは、相手が最適な対策トリオを出しても最も耐える3体を選び、先発をシールド2枚、交代先（先発の不利対面をカバー）を1枚、締めを0枚で決めます。</p>
+  <p><b>サンプル数とトレンド。</b> Day 2進出率には目安の範囲（80%区間）を付けています。8チーム未満のコアには「サンプル少」の表示が付きます。進出率順のリストは標準でサンプル数を補正し、各率を平均的な10チーム分だけ全体平均に寄せるので、4戦4勝のトリオが12戦7勝のトリオを上回ることはありません。トレンドは最新の大会と、それ以前の大会の合計を比べています。</p>
+  <p><b>リージョナルのパーティ。</b> 全355パーティを、各プレイヤーの実際の技構成で収録。分析はその技構成を使います：対策できるコア、誰も勝てないよく見るポケモン、共通弱点、6体のうちリージョナル環境に最も強い3体。</p>
+  <p><b>GBLパーティ作成。</b> 使いたいポケモンを入れると、「相方を探す」がPvPoke上位300体（またはリージョナル候補）から、3体で環境のどれだけに勝てるか（共通弱点ルール込み）で相方を順位付けします。GOバトルリーグには選出画面がないため、トリオは対戦環境全体と比べます：ランキング出力のPvPokeスーパーリーグ上位300体（順位で重み付け、1位は全体、300位は約3分の1）またはリージョナル環境です。「この3体を評価」では、シールド2枚の結果が最も良い先発、シールド1枚で先発の負けをカバーする交代先、シールド0枚の結果が最も良い締めを選びます。</p>
+  <p><b>精度。</b> 対戦にはPvPoke本体のバトルエンジン（オープンソース、MITライセンス、サイトのコード内に記載）を使っています。あなたのPvPokeマトリクス出力と比べると、シールド0・1・2枚の54,000対面すべてで評価値が完全に一致しました。個体値の探索では、まず高速な簡易シミュレーター（PvPokeとの一致率は約90〜94%）で数千通りを絞り込み、表示するものはすべてPvPokeのエンジンで再計算しています。</p>
+  <p><b>名前。</b> ポケモン・技・タイプの日本語とスペイン語の公式名は PokeAPI のデータを使っています。一部の珍しいフォルム名は英語のままです。</p>
+  <p><b>バトルマトリクス。</b> PvPokeのバトルエンジンをブラウザ内で複数のCPUコアに分けて動かします。300 × 300の総当たりは端末によって数秒から1分ほどかかります。レベルとCPは個体値とレベル上限から計算します（CP1500以下で最も高いレベル）。ダウンロードはPvPokeのマトリクス出力と同じ形式で、Wins・Losses・Draws・Averageの列も含み、同じ数値になります。</p>
+  <p><b>バトルサンドボックス。</b> PvPokeのバトルエンジンとそのサンドボックス設定（開始時HP、開始時エネルギー、能力ランク、シールドの釣り。オンはPvPoke標準の状況に応じた釣り、オフは釣りなし）。すべて初期設定ならマトリクスと全く同じ結果になります。ブレイクポイントとバルクポイントは、各個体値でレベル上限内のレベルを再計算しています。</p>
+  <p><b>個体値分析と最適個体値。</b> 各個体値はCP上限以下で最も高いレベルとし、SCPは攻撃×防御×HP（HPは切り捨て）で、pvpivs.comと同じです。「個体値に関係なく」という判定は、一方の最も弱い個体値と他方の最も強い個体値（攻撃・防御・HPのすべてで他に上回られない、または下回られない実数値フロンティア）を対戦させて確認します。これは実数値が同等以上なら勝ちが負けに変わらないことを前提としており、すべてのテスト（PvPokeのエンジンで9,779回の確認。HPの端数で評価値が1違うことはあります）で成り立ちました。最適個体値は各ポケモンのフロンティアとSCP上位600通りを選んだ環境と対戦させます。マトリクスの最適個体値ボタンは、各ポケモンの強い個体値から相手グループに最も勝てるものを探します。</p>
+  <p><b>更新。</b> 新しいリージョナルは GL Core Scout キットで追加します。DracovizのページをキットのInputsに入れて実行すると、このサイトとTeam Builderブックの両方が更新されます。</p>
+</div>
+</section>
+<datalist id="metaNames"></datalist><datalist id="teamNames"></datalist><datalist id="allNames"></datalist>
+</main>
+<dialog id="shareDlg" aria-labelledby="shTitle"><div class="shbody"><div class="shhead"><h3 id="shTitle" style="font-size:20px">Share card</h3><button id="shClose" aria-label="Close">×</button></div>
+<img id="shImg" alt="Team card preview">
+<div class="controls"><button class="btn" id="shDl">Download image</button><button class="btn ghost" id="shShare">Share…</button></div>
+<div id="shLinkRow" style="display:grid;gap:6px"><label class="fld" for="shLink" style="font-weight:700">Team link (opens this team on the site)</label><div class="controls" style="flex-wrap:nowrap"><input type="text" id="shLink" readonly><button class="btn ghost" id="shCopy">Copy</button></div></div>
+<p class="lede" style="font-size:12px">If the download is blocked, long-press or right-click the image to save it. On a page without a public address the link is a code: paste it into "Load a shared team" in Team Building.</p></div></dialog>
+<script src="sim.js"></script>
+<script src="pve.js"></script>
+<script src="data.js"></script>
+<script src="i18n.js"></script>
+<script src="types.js"></script>
+<script src="app.js"></script>
+

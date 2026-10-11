@@ -1,0 +1,30 @@
+{
+  "inputs": "inputs",
+  "gamemaster": "gamemaster.json",
+  "rankings_csv": "cp1500_all_overall_rankings.csv",
+  "workbook": "Team_Builder_Assistant_-_GL1500.xlsx",
+  "events": [
+    {
+      "name": "Baltimore",
+      "file": "Pokémon_GO_Baltimore_Regional_Championships_2027___Dracoviz.htm",
+      "day2_cutoff": 9
+    },
+    {
+      "name": "Frankfurt",
+      "file": "Pokémon_GO_Frankfurt_Regional_Championships_2027___Dracoviz.htm",
+      "day2_cutoff": 9
+    },
+    {
+      "name": "Brisbane",
+      "file": "2027-brisbane.htm",
+      "day2_cutoff": 9
+    },
+    {
+      "name": "Recife",
+      "file": "Pokémon_GO_Recife_Regional_Championships_2027___Dracoviz.htm",
+      "day2_cutoff": 9
+    }
+  ],
+  "anti_meta_net_cutoff": -0.2,
+  "gbl_top": 300
+}

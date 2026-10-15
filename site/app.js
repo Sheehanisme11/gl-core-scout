@@ -1276,7 +1276,7 @@ window.addEventListener('resize',()=>{if(MXRES&&cur==='matrix'&&MXV){const r=MXV
 // mount(el, cfg): cfg = {id, A, B (SIM.build objects), names:[n0,n1], sids:[s0,s1], o (run options), cap,
 //   sandbox:bool, actions:array|null, onEdit(actions) (sandbox edits), compact:bool}
 const BVS={};const CHARGES=[[1,'100%'],[.95,'95%'],[.75,'75%'],[.5,'50%'],[.25,'25%']];
-function bvModel(R){const U=16,C=44,PAD=10,ch={};for(const e of R.ev)if(e.k==='charged')ch[e.t]=(ch[e.t]||0)+1;
+function bvModel(R){const U=16,C=100,PAD=12,ch={};for(const e of R.ev)if(e.k==='charged')ch[e.t]=(ch[e.t]||0)+1;
   const N=R.turns+1,base=[];let x=PAD;for(let t=0;t<=N+1;t++){base[t]=x;x+=U+(ch[t]||0)*C;}
   const items=[],frames=[],lastTap=[null,null],slot={},st={hp:R.start.hp.slice(),en:R.start.en.slice(),sh:R.start.sh.slice(),out:[false,false]};
   const snap=()=>({hp:st.hp.map(v=>Math.max(0,v)),en:st.en.slice(),sh:st.sh.slice(),out:st.out.slice()});
@@ -1291,10 +1291,10 @@ function bvModel(R){const U=16,C=44,PAD=10,ch={};for(const e of R.ev)if(e.k==='c
       if(e.k==='fast'){const s0=lastTap[e.i]!=null&&lastTap[e.i]<=t?lastTap[e.i]:t;lastTap[e.i]=null;
         st.hp[1-e.i]-=e.d;st.en[e.i]=Math.min(100,st.en[e.i]+e.e);
         const it={k:'fast',i:e.i,t,s:s0,m:e.m,d:e.d,e:e.e,p:e.p,x0:base[s0],x1:base[t]+U,after:snap()};items.push(it);pend.push(it);continue;}
-      if(e.k==='charged'){flush(false);const k=slot[t]=(slot[t]||0)+1,cx=base[t]+U+C*(k-0.5),j=1-e.i;
+      if(e.k==='charged'){flush(false);const k=slot[t]=(slot[t]||0)+1,sx0=base[t]+U+C*(k-1),cx=sx0+C-26,j=1-e.i;
         if(e.sd&&shieldFor[j]){st.sh[j]=Math.max(0,st.sh[j]-1);shieldFor[j]=false;}
         st.hp[j]-=e.d;st.en[e.i]=Math.max(0,Math.min(100,st.en[e.i]+e.e));
-        const it={k:'charged',i:e.i,t,m:e.m,d:e.d,e:e.e,p:e.p,sd:e.sd,buff:e.buff,form:e.form,edit:e.edit,x:cx,after:snap()};items.push(it);
+        const it={k:'charged',i:e.i,t,m:e.m,d:e.d,e:e.e,p:e.p,sd:e.sd,buff:e.buff,form:e.form,edit:e.edit,x:cx,sx0,after:snap()};items.push(it);
         frames.push(Object.assign({t,x:cx,k:'charged',ev:[it]},snap()));pushed=true;continue;}
       if(e.k==='faint'){st.out[e.i]=true;const it={k:'faint',i:e.i,t,x:base[t]+U};items.push(it);pend.push(it);continue;}}
     flush(!pushed);}
@@ -1313,23 +1313,26 @@ function bvNarrate(S,f){const c=S.cfg,nm=k=>esc(dn(c.names[k]));if(!f)return '';
     else if(it.k==='charged')parts.push(it.sd?T('{p} uses {move}. {q} shields it.',{p:nm(it.i),move:mvTag(it.m),q:nm(1-it.i)}):T('{p} uses {move}: {d} damage ({pc}%)',{p:nm(it.i),move:mvTag(it.m),d:it.d,pc:it.p})+(it.buff?` · <small>${esc(it.buff)}</small>`:''));
     else if(it.k==='faint')parts.push(`<b>${T('{p} faints.',{p:nm(it.i)})}</b>`);}
   return parts.join(' · ')||T('Turn {t}',{t:f.t});}
-function bvSvg(S){const M=S.M,c=S.cfg,z=S.zoom,H=c.compact?118:132,Y=[34,82],RY=H-14,sx=v=>(v*z).toFixed(1);
-  let g='';
-  // turn grid + ruler
-  for(let t=1;t<=S.R.turns+1;t++){const x=sx(M.base[t]);g+=`<line x1="${x}" x2="${x}" y1="${RY-4}" y2="${RY+(t%10===0?4:0)}" class="bvtk"/>`;if(t%10===0)g+=`<text x="${x}" y="${RY+12}" class="bvtx">${t/2}s</text>`;}
-  g+=`<line x1="0" x2="${sx(M.W)}" y1="${RY-4}" y2="${RY-4}" class="bvax"/>`;
-  for(const k of [0,1])g+=`<line x1="0" x2="${sx(M.W)}" y1="${Y[k]}" y2="${Y[k]}" class="bvlane"/>`;
-  const order=n=>({fast:0,wait:0,tap:1,charged:2,faint:3})[M.items[n].k]||0;
-  M.items.map((it,n)=>n).sort((p,q)=>order(p)-order(q)||p-q).forEach(n=>{const it=M.items[n],y=Y[it.i];
-    if(it.k==='fast'){const w=Math.max(3,(it.x1-it.x0)*z-2);g+=`<rect data-bvi="${n}" x="${sx(it.x0)}" y="${y-8}" width="${w.toFixed(1)}" height="16" rx="3" fill="${typeCol(it.m)}" class="bvf${S.sel===n?' sel':''}"/>`;}
-    else if(it.k==='wait'){g+=`<rect data-bvi="${n}" x="${sx(it.x0)}" y="${y-5}" width="${Math.max(3,(it.x1-it.x0)*z-2).toFixed(1)}" height="10" rx="2" class="bvw"/>`;}
-    else if(it.k==='charged'){const r=Math.min(20,9+it.p/4.5),cl=typeCol(it.m);
-      g+=`<g data-bvi="${n}" class="bvch${S.sel===n?' sel':''}${it.edit===false?' ro':''}"><circle cx="${sx(it.x)}" cy="${y}" r="${r.toFixed(1)}" fill="${it.sd?'var(--surface)':cl}" stroke="${cl}" stroke-width="${it.sd?3:1.5}"/>${!it.sd?`<text x="${sx(it.x)}" y="${y+4}" class="bvcd">${it.d}</text>`:''}</g>`;
-      if(it.sd){const yy=Y[1-it.i],cx=+sx(it.x),hx=[0,1,2,3,4,5].map(a=>`${(cx+9*Math.cos(Math.PI/3*a+Math.PI/6)).toFixed(1)},${(yy+9*Math.sin(Math.PI/3*a+Math.PI/6)).toFixed(1)}`).join(' ');g+=`<polygon points="${hx}" class="bvsd" data-bvi="${n}"/>`;}}
-    else if(it.k==='faint'){const cx=+sx(it.x)+6;g+=`<path d="M${cx-6},${y-6}L${cx+6},${y+6}M${cx+6},${y-6}L${cx-6},${y+6}" class="bvx"/>`;}
-    else if(it.k==='tap'&&c.sandbox){g+=`<circle data-bvi="${n}" cx="${sx(it.x)+2}" cy="${y-15}" r="3.5" class="bvtap"/>`;}});
-  const f=S.frames[S.pos];g+=`<line id="${c.id}Ph" x1="${sx(f.x)}" x2="${sx(f.x)}" y1="6" y2="${RY-4}" class="bvph"/>`;
-  return `<svg class="bvsvg" width="${sx(M.W)}" height="${H}" viewBox="0 0 ${sx(M.W)} ${H}" role="img" aria-label="${esc(T('Battle timeline'))}">${g}</svg>`;}
+function bvSvg(S){const M=S.M,c=S.cfg,z=S.zoom,H=c.compact?124:136,Y=[42,96],RY=H-10,sx=v=>(v*z).toFixed(1);
+  let g='';const W=sx(M.W);
+  // PvPoke-style: dotted lane per Pokémon, small time labels underneath
+  for(let t=10;t<=S.R.turns+1;t+=10)g+=`<text x="${sx(M.base[t])}" y="${RY}" class="bvtx">${t/2}s</text>`;
+  for(const k of [0,1])g+=`<line x1="4" x2="${W}" y1="${Y[k]}" y2="${Y[k]}" class="bvlane"/>`;
+  const hex=(cx,cy,r)=>[0,1,2,3,4,5].map(a=>`${(cx+r*Math.cos(Math.PI/3*a+Math.PI/6)).toFixed(1)},${(cy+r*Math.sin(Math.PI/3*a+Math.PI/6)).toFixed(1)}`).join(' ');
+  const order=n=>({tap:0,wait:1,fast:1,charged:2,faint:3})[M.items[n].k]||0;
+  M.items.map((it,n)=>n).sort((p,q)=>order(p)-order(q)||p-q).forEach(n=>{const it=M.items[n],y=Y[it.i],on=S.sel===n?' sel':'';
+    if(it.k==='tap'){g+=`<circle data-bvi="${n}" cx="${sx(it.x+8)}" cy="${y-17}" r="4.5" class="bvtap${c.sandbox?' ed':''}${on}"/>`;}
+    else if(it.k==='fast'){const cx=+sx(it.x1-8);g+=`<rect data-bvi="${n}" x="${(cx-6).toFixed(1)}" y="${y-6}" width="12" height="12" fill="${typeCol(it.m)}" class="bvf${on}"/>`;}
+    else if(it.k==='wait'){const cx=+sx(it.x0+8);g+=`<rect data-bvi="${n}" x="${(cx-5).toFixed(1)}" y="${y-5}" width="10" height="10" class="bvw${on}"/>`;}
+    else if(it.k==='charged'){const cl=typeCol(it.m),cx=+sx(it.x),r=Math.min(19,10+it.p/5);
+      // charge-up: a chain of growing rings leading into the move
+      let chain='';const x0=+sx(it.sx0+6),x1=cx-r-5;for(let q=0;q<7;q++){const f=q/6,rr=2.5+f*(r*0.55);chain+=`<circle cx="${(x0+(x1-x0)*Math.pow(f,1.15)).toFixed(1)}" cy="${y}" r="${rr.toFixed(1)}" fill="none" stroke="${cl}" stroke-width="1.6" opacity="${(0.5+0.5*f).toFixed(2)}"/>`;}
+      g+=`<g data-bvi="${n}" class="bvch${on}${it.edit===false?' ro':''}">${chain}<circle cx="${cx}" cy="${y}" r="${r.toFixed(1)}" fill="${cl}" class="bvbig"/></g>`;
+      if(it.sd)g+=`<polygon points="${hex(cx,Y[1-it.i],10)}" class="bvsd" data-bvi="${n}"/>`;
+      if(it.buff){const up=/^\+|Attack \+|\+\d/.test(it.buff)&&!/-/.test(it.buff);g+=`<text x="${cx}" y="${y-r-5}" class="bvbf">${esc(it.buff.replace(/ Attack/g,' Atk').replace(/ Defense/g,' Def'))}</text>`;}}
+    else if(it.k==='faint'){const cx=+sx(it.x)+8;g+=`<path d="M${cx-7},${y-7}L${cx+7},${y+7}M${cx+7},${y-7}L${cx-7},${y+7}" class="bvx"/>`;}});
+  const f=S.frames[S.pos];g+=`<line id="${c.id}Ph" x1="${sx(f.x)}" x2="${sx(f.x)}" y1="10" y2="${Y[1]+22}" class="bvph"/>`;
+  return `<svg class="bvsvg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(T('Battle timeline'))}">${g}</svg>`;}
 function bvPop(S,n){const c=S.cfg,it=S.M.items[n],nm=k=>esc(dn(c.names[k]));if(!it)return '';
   const X=it.i?c.B:c.A,sec=t=>(t*0.5).toFixed(1)+'s';let h='';
   if(it.k==='fast')h=`<div class="bvp1"><b>${nm(it.i)}</b>${mvTag(it.m)}</div><div class="num">${T('Turns {a}–{b}',{a:it.s,b:it.t})} (${sec(it.s-1)}–${sec(it.t)}) · ${it.d} ${T('damage')} (${it.p}%) · +${it.e} ${T('energy')}</div><div class="num bvaft">${T('After')}: ${nm(0)} ${it.after.hp[0]} ${T('HP')}, ${it.after.en[0]} ${T('energy')} · ${nm(1)} ${it.after.hp[1]} ${T('HP')}, ${it.after.en[1]} ${T('energy')}</div>`;
@@ -1376,7 +1379,7 @@ function bvMount(el,cfg){const old=BVS[cfg.id];if(old)bvStop(old);
     <p class="bvnar"></p>
     <div class="bvtl"><div class="bvnames"><span>${esc(shortName(cfg.names[0]))}</span><span>${esc(shortName(cfg.names[1]))}</span></div><div class="bvscroll"></div></div>
     <div class="bvpopw"></div>
-    <p class="bvkey"><span><i class="kf"></i>${T('fast move (start to damage)')}</span><span><i class="kc"></i>${T('charged move (size = damage)')}</span><span><i class="ks"></i>${T('shield')}</span><span><b class="kx">✕</b> ${T('faint')}</span>${cfg.sandbox?`<span><i class="kt"></i>${T('a turn where a move can start')}</span>`:''}</p>
+    <p class="bvkey"><span><i class="kf"></i>${T('fast move')}</span><span><i class="kc"></i>${T('charged move (size = damage)')}</span><span><i class="ks"></i>${T('shield')}</span><span><b class="kx">✕</b> ${T('faint')}</span><span><i class="kt"></i>${T('a turn where a move can start')}</span></p>
     ${cfg.sandbox?`<p class="bvsbn">${T('Sandbox mode: tap any move on the timeline to change what happens on that turn: throw a different charged move, wait, change the charge, or choose whether it is shielded. Each side can shield up to 2 charged moves.')}${dropped>0?` <b>${T('{n} action(s) could not happen (not enough energy) and were skipped.',{n:dropped})}</b>`:''}</p>`:''}
   </div>`;
   bvDrawTl(S);bvPaint(S);return S;}

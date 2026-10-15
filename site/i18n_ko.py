@@ -937,5 +937,7 @@ KO = {
 "{p} uses {move}: {d} damage ({pc}%)": "{p}의 {move}: 피해 {d} ({pc}%)",
 "{p} {move}: {d} damage, +{e} energy": "{p} {move}: 피해 {d}, 에너지 +{e}",
 "Search regional teams": "리저널 팀 검색",
-"Filter by event or Day 2, search a player or Pokémon, and tap a team to test against it.": "대회나 Day 2로 거르고 플레이어나 포켓몬을 검색한 뒤 팀을 탭하면 그 팀과 테스트합니다."
+"Filter by event or Day 2, search a player or Pokémon, and tap a team to test against it.": "대회나 Day 2로 거르고 플레이어나 포켓몬을 검색한 뒤 팀을 탭하면 그 팀과 테스트합니다.",
+"Tap a Pokémon to see every opponent it beats and loses to.": "포켓몬을 탭하면 이기는 상대와 지는 상대를 모두 볼 수 있습니다.",
+"Ratings from {name}'s side. Tap an opponent to watch that battle in the sandbox.": "레이팅은 {name} 기준입니다. 상대를 탭하면 샌드박스에서 그 배틀을 볼 수 있습니다."
 }

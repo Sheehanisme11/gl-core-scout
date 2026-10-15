@@ -364,6 +364,20 @@ dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
   .t3pbp{margin:6px 0 0 20px;display:grid;gap:8px;font-size:14px}.t3pbp li{padding-left:4px}.t3ex{background:var(--sunk);border-radius:8px;padding:8px 10px}
   .t3sw,.t3in{color:var(--muted);font-style:italic}.t3ch{font-size:13px;margin:4px 0;line-height:1.7}
   @media (max-width:520px){.t3m{grid-template-columns:auto 1fr 60px}.t3m .num{grid-column:2/-1}}
+  /* matrix results: outcome bar and per-opponent breakdown */
+  .mxobc{min-width:200px;width:30%}.mxobh{white-space:nowrap}.mxobk{display:inline-flex;gap:2px;vertical-align:middle;margin-left:4px}.mxobk .chip{min-width:22px;height:18px;font-size:10px}
+  .mxob{display:flex;height:26px;border-radius:6px;overflow:hidden;background:var(--sunk);border:1px solid var(--line)}
+  .mxob i{display:grid;place-items:center;font:700 12px var(--mono);font-style:normal;min-width:0}
+  .mxob .W{background:var(--win);color:#fff}.mxob .CW{background:var(--win-soft);color:var(--win)}.mxob .T{background:var(--sunk);color:var(--muted)}
+  .mxob .CL{background:var(--even-soft);color:var(--even)}.mxob .L{background:var(--loss);color:#fff}
+  .mxob i+i{border-left:1px solid var(--surface)}
+  tr.mxrow{cursor:pointer}tr.mxrow:hover td{background:var(--accent-soft)}tr.mxrow.open td{background:var(--accent-soft)}.mxcar{color:var(--muted);font-size:11px}
+  tr.mxexp td{background:var(--sunk);padding:12px}
+  tr.mxrow td:first-child{white-space:nowrap}.mxbkh b::first-letter{text-transform:uppercase}
+  .mxbk{display:grid;gap:10px}.mxbkh{display:flex;gap:6px;align-items:center;margin-bottom:6px}.mxbkl{display:flex;flex-wrap:wrap;gap:6px}
+  .mxoc{all:unset;box-sizing:border-box;display:inline-flex;gap:6px;align-items:center;padding:4px 10px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:13px}
+  .mxoc:hover,.mxoc:focus-visible{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .mxoc b{font-size:12px;padding:1px 6px;border-radius:999px}.mxoc.W b{background:var(--win);color:#fff}.mxoc.CW b{background:var(--win-soft);color:var(--win)}.mxoc.T b{background:var(--sunk);color:var(--muted)}.mxoc.CL b{background:var(--even-soft);color:var(--even)}.mxoc.L b{background:var(--loss);color:#fff}
   /* battle view: timeline, playback, sandbox mode */
   .bv{display:grid;gap:10px;margin-top:10px}
   .bvcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}

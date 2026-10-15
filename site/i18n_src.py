@@ -855,4 +855,7 @@ D += [
 ('{p} {move}: {d} damage, +{e} energy', '{p} {move}: {d} de daño, +{e} de energía', '{p}の{move}：{d}ダメージ、エネルギー+{e}'),
 ('Search regional teams', 'Buscar equipos regionales', 'リージョナルのパーティを検索'),
 ('Filter by event or Day 2, search a player or Pokémon, and tap a team to test against it.', 'Filtra por evento o Día 2, busca un jugador o Pokémon y toca un equipo para probar contra él.', '大会やDay 2で絞り込み、プレイヤーやポケモンを検索して、パーティをタップするとテストします。'),
+# matrix result breakdown
+('Tap a Pokémon to see every opponent it beats and loses to.', 'Toca un Pokémon para ver cada rival al que vence y contra el que pierde.', 'ポケモンをタップすると、勝つ相手と負ける相手をすべて表示します。'),
+("Ratings from {name}'s side. Tap an opponent to watch that battle in the sandbox.", 'Puntuaciones desde el lado de {name}. Toca un rival para ver ese combate en el simulador.', '評価値は{name}側から見た値です。相手をタップするとサンドボックスでそのバトルを見られます。'),
 ]

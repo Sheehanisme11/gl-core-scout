@@ -1327,7 +1327,7 @@ function bvSvg(S){const M=S.M,c=S.cfg,z=S.zoom,H=c.compact?124:136,Y=[42,96],RY=
     else if(it.k==='charged'){const cl=typeCol(it.m),cx=+sx(it.x),r=Math.min(19,10+it.p/5);
       // charge-up: a chain of growing rings leading into the move
       let chain='';const x0=+sx(it.sx0+6),x1=cx-r-5;for(let q=0;q<7;q++){const f=q/6,rr=2.5+f*(r*0.55);chain+=`<circle cx="${(x0+(x1-x0)*Math.pow(f,1.15)).toFixed(1)}" cy="${y}" r="${rr.toFixed(1)}" fill="none" stroke="${cl}" stroke-width="1.6" opacity="${(0.5+0.5*f).toFixed(2)}"/>`;}
-      g+=`<g data-bvi="${n}" class="bvch${on}${it.edit===false?' ro':''}"><rect x="${x0-4}" y="${y-r-3}" width="${(cx+r+3-x0+4).toFixed(1)}" height="${(2*r+6).toFixed(1)}" fill="transparent"/>${chain}<circle cx="${cx}" cy="${y}" r="${r.toFixed(1)}" fill="${cl}" class="bvbig"/></g>`;
+      g+=`<g data-bvi="${n}" class="bvch${on}${it.edit===false?' ro':''}"><rect x="${x0-4}" y="${y-r-3}" width="${(cx+r+3-x0+4).toFixed(1)}" height="${(2*r+6).toFixed(1)}" fill="transparent"/>${chain}<circle cx="${cx}" cy="${y}" r="${r.toFixed(1)}" fill="${cl}" class="bvbig"/>${it.sd?'':`<text x="${cx}" y="${(y+(r>=14?4.5:3.5)).toFixed(1)}" class="bvcd${r>=14?' lg':''}">${it.d}</text>`}</g>`;
       if(it.sd)g+=`<polygon points="${hex(cx,Y[1-it.i],10)}" class="bvsd" data-bvi="${n}"/>`;
       if(it.buff){const up=/^\+|Attack \+|\+\d/.test(it.buff)&&!/-/.test(it.buff);g+=`<text x="${cx}" y="${y-r-5}" class="bvbf">${esc(it.buff.replace(/ Attack/g,' Atk').replace(/ Defense/g,' Def'))}</text>`;}}
     else if(it.k==='faint'){const cx=+sx(it.x)+8;g+=`<path d="M${cx-7},${y-7}L${cx+7},${y+7}M${cx+7},${y-7}L${cx-7},${y+7}" class="bvx"/>`;}});

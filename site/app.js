@@ -50,7 +50,7 @@ const typeTag=t=>`<span class="ttag">${typeIcon(t)}${tn(t)}</span>`;
 const typeBars=sid=>`<span class="tbars">${typesOf(sid).map(t=>typeChip(t)).join('')}</span>`;
 const mvTag=m=>`<span class="mvtag">${MV[m]?typeIcon(MV[m].type):''}${esc(mvName(m))}</span>`;
 const typeChip=t=>`<span class="typechip" style="background:${TC[t]}">${typeIcon(t)}${tn(t)}</span>`;
-function initials(name){const d=dn(name);if(LANG==='ja'){return d.replace(/[（(].*$/,'').slice(0,2);}const base=d.replace(/\s*\(.*$/,'').replace(/^(de |of )/i,'');const w=base.split(/[\s-]+/).filter(Boolean);return (w.length>1&&w[1].length>2&&!/^de$/i.test(w[1])?w[0][0]+w[1][0]:base.slice(0,2)).replace(/^./,c=>c.toUpperCase());}
+function initials(name){const d=dn(name);if(LANG==='ja'||LANG==='ko'){return d.replace(/[（(].*$/,'').slice(0,2);}const base=d.replace(/\s*\(.*$/,'').replace(/^(de |of )/i,'');const w=base.split(/[\s-]+/).filter(Boolean);return (w.length>1&&w[1].length>2&&!/^de$/i.test(w[1])?w[0][0]+w[1][0]:base.slice(0,2)).replace(/^./,c=>c.toUpperCase());}
 function badge(name,sid,big){const ts=typesOf(sid),c1=TC[ts[0]]||'#888',c2=TC[ts[1]||ts[0]]||c1;const sh=/\(Shadow\)/.test(name);
   const bg=ts.length>1?`linear-gradient(135deg,${c1} 0 50%,${c2} 50% 100%)`:`radial-gradient(circle at 30% 30%,${c1},${c1} 60%,rgba(0,0,0,.25))`;
   return `<span class="badge${sh?' sh':''}${big?' big':''}" style="background:${bg}" title="${esc(ts.map(tn).join(' / '))}${sh?' · '+T('Shadow'):''}">${esc(initials(name))}<span class="tics">${ts.map(typeIcon).join('')}</span></span>`;}
@@ -1998,7 +1998,7 @@ $('rtList').addEventListener('click',e=>{if(e.target.closest('#rtMore')){RT.show
 $('teamNames').innerHTML=TEAMS.map(t=>`<option value="${esc(teamLabel(t))}">`).join('');
 
 const subLine=()=>{$('sub').textContent=T('Great League · 2027 regionals · {n} teams · {d} Day 2 · {ev}',{n:NT,d:ND,ev:DATA.ev.map(e=>e[0]).join(', ')});};subLine();
-$('aboutN').textContent=`${NT} teams in all, ${ND} of them reaching Day 2 (${pct(BASE)})`;
+$('aboutN').textContent=`${NT} teams in all, ${ND} of them reaching Day 2 (${pct(BASE)})`;document.querySelectorAll('#v-about [data-lang]').forEach(b=>{b.innerHTML=b.innerHTML.replace(/\{NT\}/g,NT).replace(/\{ND\}/g,ND).replace(/\{BASE\}/g,pct(BASE));});
 lab=loadLab().map(mkSlot).filter(Boolean);team=loadTeam();trio=loadTrio();buildRev();fillLists();$('tdEv').innerHTML='<option value="all">'+T('All events')+'</option>'+EVN.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');$('tdEv').addEventListener('change',e=>{TD.ev=e.target.value;TD.shown=60;renderTD();});$('tdD2').addEventListener('change',e=>{TD.d2=e.target.checked;TD.shown=60;renderTD();});$('tdQ').addEventListener('input',e=>{TD.q=e.target.value;TD.shown=60;renderTD();});$('tdSort').addEventListener('change',e=>{TD.sort=e.target.value;renderTD();});document.querySelectorAll('[data-lang="es"],[data-lang="ja"]').forEach(b=>{b.innerHTML=b.innerHTML.replace('{NT}',NT).replace('{ND}',ND).replace('{BASE}',pct(BASE));});OBS.observe(document.body,{childList:true,subtree:true});$('langSel').addEventListener('change',e=>setLang(e.target.value));
 MOB.observe(document.body,{childList:true,subtree:true});
 let start=(location.hash||'').slice(1);const fromLink=loadFromHash();if(fromLink){start=fromLink;setTimeout(()=>toast(T('Loaded a shared team')),400);}if(!VIEWS.includes(start))start='home';try{if(window.innerWidth>640)$('setDet').open=true;}catch(e){}

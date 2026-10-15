@@ -79,6 +79,7 @@ site/
   app.html           the website layout and styles
   app.js             the website logic
   i18n_src.py        interface translations (English, Spanish, Japanese); add a row to translate new text
+  i18n_ko.py         Korean interface translations (English text -> Korean); untranslated text shows in English
   sw.js, manifest.webmanifest, icons/, PUBLISH.md   files for the stand-alone website
   sim.js             the simulator in JavaScript, identical results to simcore.py; used by Core Lab
 tools/calibrate.py   accuracy check against PvPoke exports

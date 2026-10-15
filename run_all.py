@@ -47,6 +47,10 @@ if __name__=='__main__':
     spec=importlib.util.spec_from_file_location('i18n_src',os.path.join(HERE,'site','i18n_src.py')); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
     I={'es':{},'ja':{}}
     for en,es,ja in mod.D: I['es'][en]=es; I['ja'][en]=ja
+    ksp=importlib.util.spec_from_file_location('i18n_ko',os.path.join(HERE,'site','i18n_ko.py')); kmod=importlib.util.module_from_spec(ksp); ksp.loader.exec_module(kmod)
+    I['ko']={en:kmod.KO[en] for en,_,_ in mod.D if en in kmod.KO}
+    miss=[en for en,_,_ in mod.D if en not in kmod.KO]
+    if miss: log(f'   Korean: {len(miss)} strings untranslated (shown in English), e.g. {miss[:3]}')
     open(os.path.join(HERE,'site','i18n.js'),'w',encoding='utf-8').write('const I18N='+json.dumps(I,ensure_ascii=False)+';\n')
     import base64,io,glob
     from PIL import Image

@@ -318,7 +318,7 @@ D += [
 D += [('{name} is already in this team.','{name} ya está en este equipo.','{name}はすでにパーティにいます。')]
 D += [
 ('Build a regional team','Usar un equipo regional','リージョナルのパーティを使う'),
-('Search the 355 regional teams and tap a player to load their six, with the moves they actually ran.','Busca entre los 355 equipos regionales y toca un jugador para cargar sus seis, con los ataques que usó.','355のリージョナルのパーティを検索し、プレイヤーをタップすると実際の技構成で6体を読み込みます。'),
+('Search every regional team and tap a player to load their six, with the moves they actually ran.','Busca entre todos los equipos regionales y toca un jugador para cargar sus seis, con los ataques que usó.','全リージョナルのパーティを検索し、プレイヤーをタップすると実際の技構成で6体を読み込みます。'),
 ("Load {p}'s team",'Cargar el equipo de {p}','{p}のパーティを読み込む'),
 ("Loaded {p}'s team ({e} #{n})",'Equipo de {p} cargado ({e} n.º {n})','{p}のパーティを読み込みました（{e} {n}位）'),
 ]

@@ -599,7 +599,8 @@ function oppUnits(){if(oppMode==='real')return TEAMS[oppIdx][4].filter(m=>m[1]).
 function combos(n,k){const out=[];const rec=(s,p)=>{if(p.length===k){out.push(p.slice());return;}for(let i=s;i<n;i++){p.push(i);rec(i+1,p);p.pop();}};rec(0,[]);return out;}
 function renderPreviewInputs(){
   $('opReal').hidden=oppMode!=='real';$('opCustom').hidden=oppMode==='real';setSeg(['om-real','om-custom'],'om-'+oppMode);
-  $('opTeamQ').value=teamLabel(TEAMS[oppIdx]);
+  {const t=TEAMS[oppIdx];$('opCur').innerHTML=t?`<span class="rtp"><b>${esc(t[2])}</b><small>${esc(t[0])} · #${t[1]}${t[3]?' · '+T('Day 2'):''}</small></span><span class="rtm">${t[4].filter(m=>m[1]).map(m=>monTag(m[0],m[1])).join('')}</span>`:'';}
+  if(!$('opb').hidden&&$('opb').open)OPP.render();
   $('opCustom').innerHTML=oppCustom.map((n,k)=>`<input type="text" id="oc${k}" list="allNames" value="${esc(dn(fromDisp(n)))}" placeholder="${T('Opponent')} ${k+1}" aria-label="${T('Opponent')} ${k+1}" autocomplete="off">`).join('');
   oppCustom.forEach((n,k)=>$('oc'+k).addEventListener('change',e=>{oppCustom[k]=e.target.value.trim();saveOpp();renderPreview();}));}
 let pvToken=0;
@@ -640,7 +641,7 @@ function renderPreview(){const out=$('pvOut');const mine=team.filter(Boolean),op
   out.innerHTML=h;PV3=[[role.L,role.S,role.C].map(i=>mine[i]),best.wT.map(j=>opp[j])];},20);}
 let PV3=null;$('pvOut').addEventListener('click',e=>{if(e.target.closest('#pvT3')&&PV3)openT3(PV3[0],PV3[1]);});
 seg(['om-real','om-custom'],id=>{oppMode=id.slice(3);saveOpp();renderPreviewInputs();renderPreview();});
-$('opTeamQ').addEventListener('change',e=>{const v=e.target.value.trim();const k=TEAMS.findIndex(t=>teamLabel(t)===v);if(k>=0){oppIdx=k;saveOpp();renderPreview();}});
+
 $('opRandom').addEventListener('click',()=>{const d2=TEAMS.map((t,i)=>t[3]?i:-1).filter(i=>i>=0);oppIdx=d2[Math.floor(Math.random()*d2.length)];saveOpp();renderPreviewInputs();renderPreview();});
 // ---------- TRENDS
 let trK='mon',trS='rise';
@@ -1262,10 +1263,147 @@ function cellDetail(){const el=$('mxDetail');if(!el||!MXSEL)return;const a=MXRES
    <div class="mxdm"><span>${[a.f,...a.c].map(mvTag).join(' · ')} · ${T('Lvl')} ${a.v[0]} ${a.v[1]}/${a.v[2]}/${a.v[3]}</span><span>${[b.f,...b.c].map(mvTag).join(' · ')} · ${T('Lvl')} ${b.v[0]} ${b.v[1]}/${b.v[2]}/${b.v[3]}</span></div>
    <p class="lede" style="font-size:12px">${T('Every shield combination, from {name}\'s side. Rows are its shields, columns are the opponent\'s.',{name:esc(dn(eName(a)))})}</p>
    <div class="hmwrap"><table class="hm mxsh"><thead><tr><th class="hl" title="${esc(T('Shields'))}"><small>A ↓ · B →</small></th>${[0,1,2].map(s=>`<th class="hh"><b>${s}</b></th>`).join('')}</tr></thead><tbody>${g.map((row,sa)=>`<tr><th class="hl"><b>${sa}</b></th>${row.map((r,sb)=>{const c=heatCol(r);return `<td class="hc${sa===MXRES.sa&&sb===MXRES.sb?' sel':''}" style="background:${c.bg};color:${c.fg}">${r}<small> ${tier(r)}</small></td>`;}).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  const sc=MXSEL.sh||[MXRES.sa,MXRES.sb];
+  el.querySelector('.mxdet').insertAdjacentHTML('beforeend',`<h4 class="ivh">${T('Battle at {a}v{b} shields',{a:sc[0],b:sc[1]})} <small class="mxsub2">${T('Tap a cell above to see another shield scenario.')}</small></h4><div id="mxBVw"></div>`);
+  el.querySelectorAll('.mxsh td.hc').forEach((td,n)=>{const sa=Math.floor(n/3),sb=n%3;td.dataset.mxsc=sa+':'+sb;td.classList.toggle('sel',sa===sc[0]&&sb===sc[1]);td.style.cursor='pointer';});
+  bvMount($('mxBVw'),{id:'bvMX',A,B,names:[eName(a),eName(b)],sids:[a.sid,b.sid],o:{sh:sc},cap:MXRES.cap,compact:true});
   el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+document.addEventListener('click',e=>{const td=e.target.closest('#mxDetail td[data-mxsc]');if(td&&MXSEL){MXSEL.sh=td.dataset.mxsc.split(':').map(Number);cellDetail();}});
 document.addEventListener('click',e=>{if(e.target.closest('#mxDetX')){MXSEL=null;$('mxDetail').innerHTML='';mxDraw();}});
 window.addEventListener('resize',()=>{if(MXRES&&cur==='matrix'&&MXV){const r=MXV.rowsO,c=MXV.colsO;setupCanvas(r,c);}});
 
+// ---------- BATTLE VIEW: PvPoke-style timeline, turn-by-turn playback and Sandbox Mode editing (PvPoke's own engine)
+// mount(el, cfg): cfg = {id, A, B (SIM.build objects), names:[n0,n1], sids:[s0,s1], o (run options), cap,
+//   sandbox:bool, actions:array|null, onEdit(actions) (sandbox edits), compact:bool}
+const BVS={};const CHARGES=[[1,'100%'],[.95,'95%'],[.75,'75%'],[.5,'50%'],[.25,'25%']];
+function bvModel(R){const U=16,C=44,PAD=10,ch={};for(const e of R.ev)if(e.k==='charged')ch[e.t]=(ch[e.t]||0)+1;
+  const N=R.turns+1,base=[];let x=PAD;for(let t=0;t<=N+1;t++){base[t]=x;x+=U+(ch[t]||0)*C;}
+  const items=[],frames=[],lastTap=[null,null],slot={},st={hp:R.start.hp.slice(),en:R.start.en.slice(),sh:R.start.sh.slice(),out:[false,false]};
+  const snap=()=>({hp:st.hp.map(v=>Math.max(0,v)),en:st.en.slice(),sh:st.sh.slice(),out:st.out.slice()});
+  frames.push(Object.assign({t:0,x:base[1],k:'start',ev:[]},snap()));
+  const byT={};let maxT=0;for(const e of R.ev){(byT[e.t]=byT[e.t]||[]).push(e);maxT=Math.max(maxT,e.t);}
+  for(let t=1;t<=Math.max(maxT,R.turns);t++){const evs=byT[t]||[];let pend=[],pushed=false,shieldFor=[false,false];
+    const flush=force=>{if(pend.length||force){frames.push(Object.assign({t,x:base[t]+U,k:'turn',ev:pend},snap()));pushed=true;}pend=[];};
+    for(const e of evs){
+      if(e.k==='tap'){lastTap[e.i]=e.t;items.push({k:'tap',i:e.i,t,x:base[t]});continue;}
+      if(e.k==='wait'){items.push({k:'wait',i:e.i,t,x0:base[t],x1:base[t]+U});continue;}
+      if(e.k==='shield'){shieldFor[e.i]=true;continue;}
+      if(e.k==='fast'){const s0=lastTap[e.i]!=null&&lastTap[e.i]<=t?lastTap[e.i]:t;lastTap[e.i]=null;
+        st.hp[1-e.i]-=e.d;st.en[e.i]=Math.min(100,st.en[e.i]+e.e);
+        const it={k:'fast',i:e.i,t,s:s0,m:e.m,d:e.d,e:e.e,p:e.p,x0:base[s0],x1:base[t]+U,after:snap()};items.push(it);pend.push(it);continue;}
+      if(e.k==='charged'){flush(false);const k=slot[t]=(slot[t]||0)+1,cx=base[t]+U+C*(k-0.5),j=1-e.i;
+        if(e.sd&&shieldFor[j]){st.sh[j]=Math.max(0,st.sh[j]-1);shieldFor[j]=false;}
+        st.hp[j]-=e.d;st.en[e.i]=Math.max(0,Math.min(100,st.en[e.i]+e.e));
+        const it={k:'charged',i:e.i,t,m:e.m,d:e.d,e:e.e,p:e.p,sd:e.sd,buff:e.buff,form:e.form,edit:e.edit,x:cx,after:snap()};items.push(it);
+        frames.push(Object.assign({t,x:cx,k:'charged',ev:[it]},snap()));pushed=true;continue;}
+      if(e.k==='faint'){st.out[e.i]=true;const it={k:'faint',i:e.i,t,x:base[t]+U};items.push(it);pend.push(it);continue;}}
+    flush(!pushed);}
+  return {items,frames,W:x+PAD,base,U,C};}
+function bvState(id){return BVS[id];}
+function bvEnergyBar(k,S,f){const X=k?S.cfg.B:S.cfg.A;const en=f.en[k];
+  const marks=X.ch.map(m=>`<i class="bvmk${en>=m.energy?' on':''}" style="left:${m.energy}%;--c:${typeCol(m.moveId)}" title="${esc(mvName(m.moveId))} · ${m.energy}"></i>`).join('');
+  return `<span class="bven"><i class="fill" style="width:${en}%"></i>${marks}</span>`;}
+function bvCard(k,S,f){const c=S.cfg,X=k?c.B:c.A,nm=c.names[k],mx=X.hp,hp=f.hp[k],pc=100*hp/mx;
+  return `<div class="bvc${f.out[k]?' out':''}" data-bvc="${k}">${badge(nm,c.sids[k])}<div class="bvcb"><div class="bvcn"><b>${esc(dn(nm))}</b><span class="bvsh" title="${esc(T('Shields'))}">${[0,1].map(n=>`<i class="${n<f.sh[k]?'on':''}"></i>`).join('')}</span></div>
+    <div class="bvrow"><span class="bvl">${T('HP')}</span><span class="bvhp"><i style="width:${pc.toFixed(1)}%" class="${pc<25?'lo':pc<50?'mid':''}"></i></span><b class="num">${hp}</b></div>
+    <div class="bvrow"><span class="bvl">${T('energy')}</span>${bvEnergyBar(k,S,f)}<b class="num">${f.en[k]}</b></div></div></div>`;}
+function bvNarrate(S,f){const c=S.cfg,nm=k=>esc(dn(c.names[k]));if(!f)return '';
+  if(f.k==='start')return T('Ready: press Battle to play it out turn by turn.');
+  const parts=[];for(const it of f.ev){if(it.k==='fast')parts.push(T('{p} {move}: {d} damage, +{e} energy',{p:nm(it.i),move:mvTag(it.m),d:it.d,e:it.e}));
+    else if(it.k==='charged')parts.push(it.sd?T('{p} uses {move}. {q} shields it.',{p:nm(it.i),move:mvTag(it.m),q:nm(1-it.i)}):T('{p} uses {move}: {d} damage ({pc}%)',{p:nm(it.i),move:mvTag(it.m),d:it.d,pc:it.p})+(it.buff?` · <small>${esc(it.buff)}</small>`:''));
+    else if(it.k==='faint')parts.push(`<b>${T('{p} faints.',{p:nm(it.i)})}</b>`);}
+  return parts.join(' · ')||T('Turn {t}',{t:f.t});}
+function bvSvg(S){const M=S.M,c=S.cfg,z=S.zoom,H=c.compact?118:132,Y=[34,82],RY=H-14,sx=v=>(v*z).toFixed(1);
+  let g='';
+  // turn grid + ruler
+  for(let t=1;t<=S.R.turns+1;t++){const x=sx(M.base[t]);g+=`<line x1="${x}" x2="${x}" y1="${RY-4}" y2="${RY+(t%10===0?4:0)}" class="bvtk"/>`;if(t%10===0)g+=`<text x="${x}" y="${RY+12}" class="bvtx">${t/2}s</text>`;}
+  g+=`<line x1="0" x2="${sx(M.W)}" y1="${RY-4}" y2="${RY-4}" class="bvax"/>`;
+  for(const k of [0,1])g+=`<line x1="0" x2="${sx(M.W)}" y1="${Y[k]}" y2="${Y[k]}" class="bvlane"/>`;
+  const order=n=>({fast:0,wait:0,tap:1,charged:2,faint:3})[M.items[n].k]||0;
+  M.items.map((it,n)=>n).sort((p,q)=>order(p)-order(q)||p-q).forEach(n=>{const it=M.items[n],y=Y[it.i];
+    if(it.k==='fast'){const w=Math.max(3,(it.x1-it.x0)*z-2);g+=`<rect data-bvi="${n}" x="${sx(it.x0)}" y="${y-8}" width="${w.toFixed(1)}" height="16" rx="3" fill="${typeCol(it.m)}" class="bvf${S.sel===n?' sel':''}"/>`;}
+    else if(it.k==='wait'){g+=`<rect data-bvi="${n}" x="${sx(it.x0)}" y="${y-5}" width="${Math.max(3,(it.x1-it.x0)*z-2).toFixed(1)}" height="10" rx="2" class="bvw"/>`;}
+    else if(it.k==='charged'){const r=Math.min(20,9+it.p/4.5),cl=typeCol(it.m);
+      g+=`<g data-bvi="${n}" class="bvch${S.sel===n?' sel':''}${it.edit===false?' ro':''}"><circle cx="${sx(it.x)}" cy="${y}" r="${r.toFixed(1)}" fill="${it.sd?'var(--surface)':cl}" stroke="${cl}" stroke-width="${it.sd?3:1.5}"/>${!it.sd?`<text x="${sx(it.x)}" y="${y+4}" class="bvcd">${it.d}</text>`:''}</g>`;
+      if(it.sd){const yy=Y[1-it.i],cx=+sx(it.x),hx=[0,1,2,3,4,5].map(a=>`${(cx+9*Math.cos(Math.PI/3*a+Math.PI/6)).toFixed(1)},${(yy+9*Math.sin(Math.PI/3*a+Math.PI/6)).toFixed(1)}`).join(' ');g+=`<polygon points="${hx}" class="bvsd" data-bvi="${n}"/>`;}}
+    else if(it.k==='faint'){const cx=+sx(it.x)+6;g+=`<path d="M${cx-6},${y-6}L${cx+6},${y+6}M${cx+6},${y-6}L${cx-6},${y+6}" class="bvx"/>`;}
+    else if(it.k==='tap'&&c.sandbox){g+=`<circle data-bvi="${n}" cx="${sx(it.x)+2}" cy="${y-15}" r="3.5" class="bvtap"/>`;}});
+  const f=S.frames[S.pos];g+=`<line id="${c.id}Ph" x1="${sx(f.x)}" x2="${sx(f.x)}" y1="6" y2="${RY-4}" class="bvph"/>`;
+  return `<svg class="bvsvg" width="${sx(M.W)}" height="${H}" viewBox="0 0 ${sx(M.W)} ${H}" role="img" aria-label="${esc(T('Battle timeline'))}">${g}</svg>`;}
+function bvPop(S,n){const c=S.cfg,it=S.M.items[n],nm=k=>esc(dn(c.names[k]));if(!it)return '';
+  const X=it.i?c.B:c.A,sec=t=>(t*0.5).toFixed(1)+'s';let h='';
+  if(it.k==='fast')h=`<div class="bvp1"><b>${nm(it.i)}</b>${mvTag(it.m)}</div><div class="num">${T('Turns {a}–{b}',{a:it.s,b:it.t})} (${sec(it.s-1)}–${sec(it.t)}) · ${it.d} ${T('damage')} (${it.p}%) · +${it.e} ${T('energy')}</div><div class="num bvaft">${T('After')}: ${nm(0)} ${it.after.hp[0]} ${T('HP')}, ${it.after.en[0]} ${T('energy')} · ${nm(1)} ${it.after.hp[1]} ${T('HP')}, ${it.after.en[1]} ${T('energy')}</div>`;
+  else if(it.k==='charged')h=`<div class="bvp1"><b>${nm(it.i)}</b>${mvTag(it.m)}</div><div class="num">${T('Turn {t}',{t:it.t})} (${sec(it.t)}) · ${it.sd?T('Shielded by {name}',{name:nm(1-it.i)}):`${it.d} ${T('damage')} (${it.p}%)`} · ${it.e} ${T('energy')}${it.buff?' · '+esc(it.buff):''}</div><div class="num bvaft">${T('After')}: ${nm(0)} ${it.after.hp[0]} ${T('HP')}, ${it.after.en[0]} ${T('energy')} · ${nm(1)} ${it.after.hp[1]} ${T('HP')}, ${it.after.en[1]} ${T('energy')}</div>`;
+  else if(it.k==='tap')h=`<b>${nm(it.i)}</b><div class="num">${T('Turn {t}',{t:it.t})} (${sec(it.t-1)})</div>`;
+  else if(it.k==='wait')h=`<div class="bvp1"><b>${nm(it.i)}</b>${T('Wait')}</div><div class="num">${T('Turn {t}',{t:it.t})}</div>`;
+  // sandbox editor: choose what this Pokémon does on this turn
+  if(c.sandbox&&(it.k==='charged'&&it.edit!==false||it.k==='fast'||it.k==='tap'||it.k==='wait')){const turn=it.k==='fast'?it.s:it.t;
+    const cur=it.k==='charged'?'c'+X.ch.findIndex(m=>m.moveId===it.m):it.k==='wait'?'wait':'fast';
+    const act=it.k==='charged'?(S.actions||[]).find(a=>a.type==='charged'&&a.actor===it.i&&a.turn===it.t):null;
+    const shOn=act?act.shielded:false,bfOn=act?act.buffs:false,chg=act?act.charge||1:1;
+    const hasBuff=X.ch.some(m=>m.buffs&&(m.buffApplyChance||1)<1);
+    h+=`<div class="bved" data-bvturn="${turn}" data-bvactor="${it.i}" data-bvorig="${it.k==='charged'?it.t:''}"><div class="bvedh">${T('Sandbox: what does {p} do on turn {t}?',{p:nm(it.i),t:turn})}</div>
+      <label class="fld">${T('Action')}<select data-bved="act"><option value="fast"${cur==='fast'?' selected':''}>${T('Fast move')} (${esc(mvName(X.fast.moveId))})</option>${X.ch.map((m,j)=>`<option value="c${j}"${cur==='c'+j?' selected':''}>${esc(mvName(m.moveId))} (${m.energy})</option>`).join('')}<option value="wait"${cur==='wait'?' selected':''}>${T('Wait')}</option></select></label>
+      <label class="fld"><input type="checkbox" data-bved="sh"${shOn?' checked':''}> ${T('{p} shields it',{p:nm(1-it.i)})}</label>
+      ${hasBuff?`<label class="fld"><input type="checkbox" data-bved="bf"${bfOn?' checked':''}> ${T('Stat change triggers')}</label>`:''}
+      <label class="fld">${T('Charge')}<select data-bved="chg">${CHARGES.map(([v,l])=>`<option value="${v}"${v===chg?' selected':''}>${l}</option>`).join('')}</select></label>
+      <div class="controls"><button class="btn" data-bvapply="1">${T('Apply')}</button></div></div>`;}
+  return `<div class="bvpop" role="dialog">${h}<button class="mxx bvpx" data-bvclose="1" aria-label="${esc(T('Close'))}">×</button></div>`;}
+function bvPaint(S,scroll){const c=S.cfg,f=S.frames[S.pos],root=$(c.id);if(!root)return;
+  root.querySelector('.bvcards').innerHTML=bvCard(0,S,f)+bvCard(1,S,f);
+  root.querySelector('.bvnar').innerHTML=bvNarrate(S,f);
+  root.querySelector('.bvclock').textContent=T('Turn {t}',{t:f.t})+' · '+(f.t*0.5).toFixed(1)+'s';
+  const sl=root.querySelector('.bvscrub');if(sl){sl.max=S.frames.length-1;sl.value=S.pos;}
+  const ph=$(c.id+'Ph');if(ph){const x=(f.x*S.zoom).toFixed(1);ph.setAttribute('x1',x);ph.setAttribute('x2',x);}
+  const pb=root.querySelector('[data-bvplay]');if(pb){pb.textContent=S.playing?'⏸ '+T('Pause'):(S.pos>=S.frames.length-1?'▶ '+T('Battle!'):'▶ '+T('Play'));pb.setAttribute('aria-pressed',String(S.playing));}
+  if(scroll){const w=root.querySelector('.bvscroll');if(w){const x=f.x*S.zoom;if(x<w.scrollLeft+40||x>w.scrollLeft+w.clientWidth-60)w.scrollLeft=Math.max(0,x-w.clientWidth/2);}}}
+function bvDrawTl(S){const root=$(S.cfg.id);if(!root)return;root.querySelector('.bvscroll').innerHTML=bvSvg(S);const p=root.querySelector('.bvpopw');p.innerHTML=S.sel!=null?bvPop(S,S.sel):'';}
+function bvStop(S){S.playing=false;clearTimeout(S.timer);}
+function bvTick(S){if(!S.playing)return;if(S.pos>=S.frames.length-1){bvStop(S);bvPaint(S);return;}
+  S.pos++;bvPaint(S,true);const f=S.frames[S.pos];S.timer=setTimeout(()=>bvTick(S),(f.k==='charged'?1400:500)/S.speed);}
+function bvMount(el,cfg){const old=BVS[cfg.id];if(old)bvStop(old);
+  const R=cfg.R||PVE.detail(cfg.A.spec,cfg.B.spec,Object.assign({},cfg.o,{cap:cfg.cap,actions:cfg.sandbox?(cfg.actions||null):null}));
+  const S={cfg,R,M:bvModel(R),pos:0,playing:false,timer:null,speed:old?old.speed:1,zoom:old?old.zoom:(cfg.compact?0.8:1),sel:null,actions:R.actions};
+  S.frames=S.M.frames;S.pos=S.frames.length-1;BVS[cfg.id]=S;
+  const dropped=cfg.sandbox&&cfg.actions?cfg.actions.length-R.actions.filter(a=>a.valid).length:0;
+  el.innerHTML=`<div class="bv" id="${cfg.id}">
+    <div class="bvcards"></div>
+    <div class="bvctl"><button class="btn" data-bvplay="1"></button><button class="btn ghost" data-bvstep="-1" aria-label="${esc(T('Step back'))}">◀</button><button class="btn ghost" data-bvstep="1" aria-label="${esc(T('Step forward'))}">▶</button><button class="btn ghost" data-bvend="1" aria-label="${esc(T('Jump to the end'))}">⏭</button>
+      <label class="fld">${T('Speed')}<select data-bvspeed="1">${[0.5,1,2,4].map(v=>`<option value="${v}"${v===S.speed?' selected':''}>${v}×</option>`).join('')}</select></label>
+      <label class="fld">${T('Zoom')}<select data-bvzoom="1">${[0.5,0.8,1,1.5,2].map(v=>`<option value="${v}"${v===S.zoom?' selected':''}>${v}×</option>`).join('')}</select></label>
+      <span class="num bvclock"></span></div>
+    <input type="range" class="bvscrub" min="0" value="0" aria-label="${esc(T('Battle position'))}">
+    <p class="bvnar"></p>
+    <div class="bvtl"><div class="bvnames"><span>${esc(shortName(cfg.names[0]))}</span><span>${esc(shortName(cfg.names[1]))}</span></div><div class="bvscroll"></div></div>
+    <div class="bvpopw"></div>
+    <p class="bvkey"><span><i class="kf"></i>${T('fast move (start to damage)')}</span><span><i class="kc"></i>${T('charged move (size = damage)')}</span><span><i class="ks"></i>${T('shield')}</span><span><b class="kx">✕</b> ${T('faint')}</span>${cfg.sandbox?`<span><i class="kt"></i>${T('a turn where a move can start')}</span>`:''}</p>
+    ${cfg.sandbox?`<p class="bvsbn">${T('Sandbox mode: tap any move on the timeline to change what happens on that turn: throw a different charged move, wait, change the charge, or choose whether it is shielded. Each side can shield up to 2 charged moves.')}${dropped>0?` <b>${T('{n} action(s) could not happen (not enough energy) and were skipped.',{n:dropped})}</b>`:''}</p>`:''}
+  </div>`;
+  bvDrawTl(S);bvPaint(S);return S;}
+// events (one delegated handler for every battle view on the page)
+document.addEventListener('click',e=>{const root=e.target.closest('.bv');if(!root)return;const S=BVS[root.id];if(!S)return;const t=e.target;
+  const b=t.closest('button');
+  if(b&&b.dataset.bvplay){if(S.playing){bvStop(S);bvPaint(S);return;}if(S.pos>=S.frames.length-1)S.pos=0;S.playing=true;S.sel=null;root.querySelector('.bvpopw').innerHTML='';bvPaint(S,true);S.timer=setTimeout(()=>bvTick(S),400/S.speed);return;}
+  if(b&&b.dataset.bvstep){bvStop(S);S.pos=Math.max(0,Math.min(S.frames.length-1,S.pos+(+b.dataset.bvstep)));bvPaint(S,true);return;}
+  if(b&&b.dataset.bvend){bvStop(S);S.pos=S.frames.length-1;bvPaint(S,true);return;}
+  if(b&&b.dataset.bvclose){S.sel=null;bvDrawTl(S);return;}
+  if(b&&b.dataset.bvapply){const ed=b.closest('.bved'),turn=+ed.dataset.bvturn,actor=+ed.dataset.bvactor,orig=ed.dataset.bvorig,act=ed.querySelector('[data-bved="act"]').value;
+    const sh=ed.querySelector('[data-bved="sh"]'),bf=ed.querySelector('[data-bved="bf"]'),chg=+ed.querySelector('[data-bved="chg"]').value;
+    let A=(S.actions||[]).filter(a=>a.valid!==false).map(a=>Object.assign({},a));
+    A=A.filter(a=>!(a.actor===actor&&(a.turn===turn||(orig!==''&&a.turn===+orig))));
+    if(act==='wait')A.push({type:'wait',actor,turn,value:0});
+    else if(act!=='fast')A.push({type:'charged',actor,turn,value:+act.slice(1),shielded:!!(sh&&sh.checked),buffs:!!(bf&&bf.checked),charge:chg});
+    A.sort((x,y)=>x.turn-y.turn||x.actor-y.actor);S.sel=null;if(S.cfg.onEdit)S.cfg.onEdit(A);return;}
+  const hit=t.closest('[data-bvi]');
+  if(hit&&root.contains(hit)){const n=+hit.dataset.bvi;S.sel=S.sel===n?null:n;bvStop(S);
+    const it=S.M.items[n];if(it&&it.after){const fi=S.frames.findIndex(f=>f.ev.includes(it));if(fi>=0)S.pos=fi;}
+    bvDrawTl(S);bvPaint(S);return;}
+  if(t.closest('.bvsvg')){const svg=t.closest('.bvsvg'),r=svg.getBoundingClientRect(),x=(e.clientX-r.left)/S.zoom;let best=0;S.frames.forEach((f,i)=>{if(Math.abs(f.x-x)<Math.abs(S.frames[best].x-x))best=i;});bvStop(S);S.pos=best;S.sel=null;root.querySelector('.bvpopw').innerHTML='';bvPaint(S);}});
+document.addEventListener('input',e=>{const root=e.target.closest('.bv');if(!root)return;const S=BVS[root.id];if(!S)return;
+  if(e.target.classList.contains('bvscrub')){bvStop(S);S.pos=+e.target.value;bvPaint(S,true);}});
+document.addEventListener('change',e=>{const root=e.target.closest('.bv');if(!root)return;const S=BVS[root.id];if(!S)return;const d=e.target.dataset;
+  if(d.bvspeed){S.speed=+e.target.value;return;}
+  if(d.bvzoom){S.zoom=+e.target.value;bvDrawTl(S);bvPaint(S,true);return;}});
 // ---------- BATTLE SANDBOX (one matchup, every input adjustable)
 // Side: {sid,f,c,iv,lv, sh, hp (starting HP or null = full), en, st:[atk,def], bait}
 function sbSide(sid,o){o=o||{};const e=mkEntry(sid,o);return Object.assign(e,{sh:o.sh!=null?o.sh:1,hp:null,en:0,st:[0,0],bait:true});}
@@ -1295,31 +1433,30 @@ function renderSandbox(){const el=$('sbIn');if(!el)return;
   $('sbCap').value=String(SB.cap);sbResult();if(SB_AUTO){SB_AUTO=false;setTimeout(()=>{sbAnalyse();const c=$('sbIV');if(c)c.scrollIntoView({behavior:'smooth',block:'start'});},50);}}
 // --- result
 const typeCol=mv=>TC[MV[mv]?MV[mv].type:'normal']||'#888';
-function sbResult(){const out=$('sbOut');if(!out)return;const s=SB.s,A=sbBuild(s[0]),B=sbBuild(s[1]),o=sbOpts(A,B),log=[];o.log=log;const R=SIM.run(A,B,o);
+function sbDetail(){const s=SB.s,A=sbBuild(s[0]),B=sbBuild(s[1]),o=sbOpts(A,B),sand=SB.mode==='sandbox';
+  // Sandbox Mode starts from the automatic battle at your shield settings, turned into editable actions; then each side may shield up to 2 charged moves
+  if(sand&&!SB.actions){const R0=PVE.detail(A.spec,B.spec,Object.assign({},o,{cap:SB.cap,actions:null}));SB.actions=R0.actions.map(a=>Object.assign({},a));sbSave();}
+  const oo=sand?Object.assign({},o,{sh:[2,2]}):o;const R=PVE.detail(A.spec,B.spec,Object.assign({},oo,{cap:SB.cap,actions:sand?SB.actions:null}));
+  return {A,B,o,oo,R,sand};}
+function bvLog(M){return M.items.filter(it=>it.k==='fast'||it.k==='charged').map(it=>({t:it.t,i:it.i,k:it.k,m:it.m,d:it.d,sd:it.sd,hp:it.after.hp}));}
+function sbEnc(){try{return btoa(unescape(encodeURIComponent(JSON.stringify({s:SB.s,c:SB.cap,m:SB.mode||'auto',a:SB.mode==='sandbox'?SB.actions:null})))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}catch(e){return '';}}
+function sbDec(str){try{const o=JSON.parse(decodeURIComponent(escape(atob(str.replace(/-/g,'+').replace(/_/g,'/')))));if(!o||!Array.isArray(o.s)||!o.s[0]||!o.s[1]||!SP[o.s[0].sid]||!SP[o.s[1].sid])return null;return o;}catch(e){return null;}}
+function sbResult(){const out=$('sbOut');if(!out)return;const s=SB.s,D=sbDetail(),{A,B,o,R,sand}=D;
   const nm=k=>esc(dn(eName(s[k]))),r=R.ratings,win=r[0]>500?0:r[0]<500?1:-1;
-  const hpBar=(k,b,h0,h1)=>`<div class="sbhp"><span class="sbhpn">${nm(k)}</span><span class="sbbar"><i class="start" style="width:${(100*h0/b.hp).toFixed(1)}%"></i><i class="left" style="width:${(100*h1/b.hp).toFixed(1)}%"></i></span><span class="num">${h1} / ${b.hp} ${T('HP')}</span></div>`;
-  let h=`<div class="card sbres"><div class="sbverdict ${win===0?'w0':win===1?'w1':'tie'}"><b>${win<0?T('Tie'):T('{name} wins',{name:nm(win)})}</b><span class="num">${nm(0)} <span class="bigr">${r[0]}</span> · ${nm(1)} <span class="bigr">${r[1]}</span></span>${chip(tier(r[0]))}</div>
+  let h=`<div class="card sbres"><div class="sbverdict ${win===0?'w0':win===1?'w1':'tie'}"><b>${win<0?T('Tie'):T('{name} wins',{name:nm(win)})}</b><span class="num">${nm(0)} <span class="bigr">${r[0]}</span> · ${nm(1)} <span class="bigr">${r[1]}</span></span>${chip(tier(r[0]))}${sand?`<span class="tag sbmtag">${T('Sandbox mode')}</span>`:''}</div>
    <p class="lede" style="font-size:13px">${T('Battle length {s}s · shields left {a} / {b} · energy left {c} / {d}',{s:(R.turns*0.5).toFixed(1),a:R.sh[0],b:R.sh[1],c:R.en[0],d:R.en[1]})}</p>
-   ${hpBar(0,A,o.hp[0],R.hp[0])}${hpBar(1,B,o.hp[1],R.hp[1])}
-   ${sbTimeline(log,A,B,o,R)}</div>`;
-  h+=sbLogCard(log,A,B);
+   <div class="controls sbmodes"><div class="seg" role="group" aria-label="${esc(T('Battle mode'))}"><button data-sbmode="auto" aria-pressed="${!sand}">${T('Automatic')}</button><button data-sbmode="sandbox" aria-pressed="${sand}">${T('Sandbox mode')}</button></div>
+    ${sand?`<button class="link" id="sbReset">${T('Reset timeline')}</button>`:''}<button class="link" id="sbLink">${T('Copy link to this battle')}</button>${R.link?`<a class="link" href="${esc(R.link)}" target="_blank" rel="noopener">${T('Open in PvPoke')} ↗</a>`:''}</div>
+   <div id="sbBV"></div></div>`;
+  const M=bvModel(R);
+  h+=sbLogCard(bvLog(M),A,B);
   h+=sbDamageCard(A,B,o);
   h+=sbIVCard(A,B);
   h+=sbShieldGrid(A,B);
   h+='<div id="sbIV"></div>';
-  out.innerHTML=h;renderSbIV();}
-function sbTimeline(log,A,B,o,R){const T0=Math.max(1,R.turns+1),X=t=>Math.min(97,Math.max(2,100*(t+0.5)/T0)).toFixed(2);const nm=k=>dn(eName(SB.s[k]));
-  const lane=k=>{let h='';for(const e of log){if(e.i!==k)continue;
-      if(e.k==='fast')h+=`<i class="tf" style="left:${X(e.t)}%;background:${typeCol(e.m)}" title="${esc(`${(e.t*0.5).toFixed(1)}s · ${nm(k)}: ${mvName(e.m)} (${e.d})`)}"></i>`;
-      else if(e.k==='charged')h+=`<i class="tc${e.sd?' sd':''}" style="left:${X(e.t)}%;background:${typeCol(e.m)}" title="${esc(`${(e.t*0.5).toFixed(1)}s · ${nm(k)}: ${mvName(e.m)} ${e.sd?T('(shielded)'):'('+e.d+')'}`)}"><span>${esc(mvAbbrName(e.m))}</span></i>`;}
-    return h;};
-  // HP lines (percent of max) for both sides
-  const pts=k=>{const mx=k?B.hp:A.hp;let p=[`0,${(100-100*o.hp[k]/mx).toFixed(1)}`];let last=o.hp[k];for(const e of log){if(!e.hp)continue;const v=Math.max(0,e.hp[k]);if(v!==last){p.push(`${X(e.t)},${(100-100*last/mx).toFixed(1)}`);p.push(`${X(e.t)},${(100-100*v/mx).toFixed(1)}`);last=v;}}p.push(`100,${(100-100*Math.max(0,last)/mx).toFixed(1)}`);return p.join(' ');};
-  return `<div class="sbtl" role="img" aria-label="${esc(T('Battle timeline'))}"><div class="sblane"><span class="sbln">${esc(nm(0))}</span><div class="sbtrack">${lane(0)}</div></div>
-   <div class="sblane"><span class="sbln">${esc(nm(1))}</span><div class="sbtrack">${lane(1)}</div></div>
-   <div class="sblane"><span class="sbln">${T('HP')}</span><svg class="sbhpg" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts(0)}" class="l0"/><polyline points="${pts(1)}" class="l1"/></svg></div>
-   <div class="sbaxis"><span>0s</span><span>${(R.turns*0.25).toFixed(1)}s</span><span>${(R.turns*0.5).toFixed(1)}s</span></div>
-   <p class="sbkey"><i class="tf"></i>${T('fast move')} <i class="tc"></i>${T('charged move')} <i class="tc sd"></i>${T('shielded')}</p></div>`;}
+  out.innerHTML=h;
+  bvMount($('sbBV'),{id:'bvSB',A,B,R,names:[eName(s[0]),eName(s[1])],sids:[s[0].sid,s[1].sid],o:D.oo,cap:SB.cap,sandbox:sand,actions:SB.actions,onEdit:a=>{SB.actions=a;sbSave();sbResult();}});
+  renderSbIV();}
 function sbLogCard(log,A,B){const nm=k=>esc(dn(eName(SB.s[k])));const rows=[];let seg=[{n:0,d:0,m:null,t0:null},{n:0,d:0,m:null,t0:null}],segStart=0;
   const flush=tEnd=>{if(!seg[0].n&&!seg[1].n)return;rows.push(`<tr class="sbfast"><td class="num">${(segStart*0.5).toFixed(1)}–${(tEnd*0.5).toFixed(1)}s</td><td colspan="3">${[0,1].filter(k=>seg[k].n).map(k=>`${nm(k)}: ${seg[k].n} × ${esc(mvName(seg[k].m))} <span class="num">(${seg[k].d} ${T('damage')})</span>`).join(' · ')}</td></tr>`);seg=[{n:0,d:0,m:null},{n:0,d:0,m:null}];};
   for(const e of log){if(e.k==='fast'){const s=seg[e.i];if(!s.n&&!seg[1-e.i].n)segStart=e.t;s.n++;s.d+=e.d;s.m=e.m;continue;}
@@ -1359,8 +1496,8 @@ function sbShieldGrid(A,B){const s=SB.s;const g=[0,1,2].map(a=>[0,1,2].map(b=>SI
 const SBEL=$('v-sandbox');
 function sbChanged(full){sbSave();if(full)renderSandbox();else sbResult();}
 SBEL.addEventListener('change',e=>{const t=e.target,d=t.dataset;
-  if(d.sbname!=null){const k=+d.sbname,sid=resolveSid(t.value);if(!sid){toast(T('Pokémon not found: {n}',{n:t.value}));t.value=dn(eName(SB.s[k]));return;}const o=SB.s[k];SB.s[k]=Object.assign(sbSide(sid),{sh:o.sh,en:0,st:[0,0],bait:o.bait});sbChanged(true);return;}
-  if(d.sbmv){const [k,slot]=d.sbmv.split(':'),x=SB.s[+k];if(slot==='f')x.f=t.value;else{const c=[x.c[0]||'',x.c[1]||''];c[+slot]=t.value;x.c=c.filter((m,j,a)=>m&&a.indexOf(m)===j);if(!x.c.length)x.c=defMoves(x.sid).c.slice(0,1);}sbChanged(true);return;}
+  if(d.sbname!=null){const k=+d.sbname,sid=resolveSid(t.value);if(!sid){toast(T('Pokémon not found: {n}',{n:t.value}));t.value=dn(eName(SB.s[k]));return;}const o=SB.s[k];SB.s[k]=Object.assign(sbSide(sid),{sh:o.sh,en:0,st:[0,0],bait:o.bait});SB.actions=null;sbChanged(true);return;}
+  if(d.sbmv){const [k,slot]=d.sbmv.split(':'),x=SB.s[+k];if(slot==='f')x.f=t.value;else{const c=[x.c[0]||'',x.c[1]||''];c[+slot]=t.value;x.c=c.filter((m,j,a)=>m&&a.indexOf(m)===j);if(!x.c.length)x.c=defMoves(x.sid).c.slice(0,1);}SB.actions=null;sbChanged(true);return;}
   if(d.sbiv){const [k,i]=d.sbiv.split(':').map(Number),x=SB.s[k];const cur=sbIV(x).slice(1);cur[i]=Math.max(0,Math.min(15,Math.round(+t.value||0)));x.iv=cur;x.lv=null;sbChanged(true);return;}
   if(d.sbst){const [k,i]=d.sbst.split(':').map(Number);SB.s[k].st[i]=+t.value;sbChanged(false);return;}
   if(d.sbbait!=null){SB.s[+d.sbbait].bait=t.checked;sbChanged(false);return;}
@@ -1372,11 +1509,14 @@ SBEL.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)retur
   if(d.sbsh){const [k,s]=d.sbsh.split(':').map(Number);SB.s[k].sh=s;b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));sbChanged(false);return;}
   if(d.sbivset){const [k,m]=d.sbivset.split(':');setIV(SB.s[+k],m);if(m==='r1')SB.s[+k].iv=rank1(SB.s[+k].sid,SB.cap).slice();sbChanged(true);return;}
   if(d.sbreset){const x=SB.s[+d.sbreset];Object.assign(x,{hp:null,en:0,st:[0,0],bait:true,sh:1});sbChanged(true);return;}
-  if(b.id==='sbSwap'){SB.s=[SB.s[1],SB.s[0]];sbChanged(true);return;}
+  if(d.sbmode){SB.mode=d.sbmode;if(SB.mode==='sandbox')SB.actions=null;sbChanged(false);return;}
+  if(b.id==='sbReset'){SB.actions=null;sbChanged(false);return;}
+  if(b.id==='sbLink'){const url=location.href.split('#')[0]+'#sb='+sbEnc();(navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>toast(T('Link copied')),()=>{prompt(T('Copy this link'),url);});return;}
+  if(b.id==='sbSwap'){SB.s=[SB.s[1],SB.s[0]];SB.actions=null;sbChanged(true);return;}
   if(b.id==='sbFromTeam'){const t=team.filter(Boolean);if(t[0])SB.s[0]=Object.assign(sbSide(t[0].sid,{f:t[0].f,c:t[0].c}),{sh:SB.s[0].sh});sbChanged(true);return;}});
 // open a matrix cell in the sandbox
 function openSandbox(a,b,sa,sb){const cp=(x,sh)=>Object.assign({sid:x.sid,f:x.f,c:x.c.slice(),iv:x.iv?x.iv.slice():null,lv:x.lv!=null?x.lv:null},{sh,hp:null,en:0,st:[0,0],bait:true});
-  SB.s=[cp(a,sa),cp(b,sb)];SB.cap=MXRES?MXRES.cap:SB.cap;sbSave();go('sandbox');window.scrollTo({top:0});}
+  SB.s=[cp(a,sa),cp(b,sb)];SB.cap=MXRES?MXRES.cap:SB.cap;SB.mode='auto';SB.actions=null;sbSave();go('sandbox');window.scrollTo({top:0});}
 document.addEventListener('click',e=>{const b=e.target.closest('#mxToSb');if(b&&MXSEL&&MXRES)openSandbox(MXRES.A[MXSEL.a],MXRES.B[MXSEL.b],MXRES.sa,MXRES.sb);});
 
 // ---------- SANDBOX: which IVs flip this matchup
@@ -1888,7 +2028,7 @@ document.addEventListener('click',async e=>{
   if(e.target.closest('#shCopy')&&SHARE){const inp=$('shLink');try{await navigator.clipboard.writeText(inp.value);toast(T('Team link copied'));}catch(err){inp.select();try{document.execCommand('copy');toast(T('Team link copied'));}catch(e2){}}return;}
   if(e.target.closest('#impGo')){const v=$('impQ').value;const sl=decodeTeam(v);if(!sl){toast(T('That link or code was not recognised.'));return;}
     if(/trio=/.test(v)){trio=[0,1,2].map(k=>sl[k]||null);g3save();G3S='rate';go('gbl');}else{team=[0,1,2,3,4,5].map(k=>sl[k]||null);saveTeam();go('team');}$('impQ').value='';toast(T('Loaded a shared team'));}});
-function loadFromHash(){const h=(location.hash||'').slice(1);const m=h.match(/^(team|trio)=([\w-]+)/);if(!m)return null;const sl=decodeTeam(m[2]);if(!sl)return null;
+function loadFromHash(){const h=(location.hash||'').slice(1);{const m=h.match(/^sb=([\w-]+)/);if(m){const o=sbDec(m[1]);if(o){SB={cap:o.c||50,s:o.s,mode:o.m==='sandbox'?'sandbox':'auto',actions:Array.isArray(o.a)?o.a:null};sbSave();return 'sandbox';}}}const m=h.match(/^(team|trio)=([\w-]+)/);if(!m)return null;const sl=decodeTeam(m[2]);if(!sl)return null;
   if(m[1]==='trio'){trio=[0,1,2].map(k=>sl[k]||null);g3save();G3S='rate';return 'gbl';}team=[0,1,2,3,4,5].map(k=>sl[k]||null);saveTeam();return 'team';}
 
 // ---------- LEARN: quizzes
@@ -1975,24 +2115,29 @@ seg(['ws-0','ws-1','ws-2','ws-mix'],id=>{WW.sh=id.slice(3);WW.q=null;try{localSt
 seg(['mp-top','mp-all'],id=>{MC.pool=id.slice(3);MC.focus='';$('mcFocus').value='';MC.q=null;try{localStorage.setItem('gl_mcm',JSON.stringify({pool:MC.pool}));}catch(e){}renderMC();});
 $('mcQ').addEventListener('input',e=>{MC.ref=e.target.value;MC.shown=25;renderMCRef();});
 // ---------- build a regional team (Team Building)
-let RT={ev:'all',d2:false,q:'',shown:40};
-function rtMatch(t){if(RT.ev!=='all'&&t[0]!==RT.ev)return false;if(RT.d2&&!t[3])return false;const q=RT.q.trim().toLowerCase();if(!q)return true;
-  if(t[2].toLowerCase().includes(q))return true;return t[4].some(m=>m[0].toLowerCase().includes(q)||dn(m[0]).toLowerCase().includes(q));}
-function renderRT(){const idx=[];DATA.T.forEach((t,i)=>{if(rtMatch(t))idx.push(i);});
-  idx.sort((a,b)=>DATA.T[a][1]-DATA.T[b][1]||EVN.indexOf(DATA.T[a][0])-EVN.indexOf(DATA.T[b][0]));
-  $('rtCount').textContent=T('{k} teams',{k:idx.length});
-  $('rtList').innerHTML=idx.slice(0,RT.shown).map(i=>{const t=DATA.T[i];return `<button class="rtrow" data-rt="${i}" aria-label="${esc(T('Load {p}\'s team',{p:t[2]}))}"><span class="rtp"><b>${esc(t[2])}</b><small>${esc(t[0])} · #${t[1]}${t[3]?' · '+T('Day 2'):''}</small></span><span class="rtm">${t[4].filter(m=>m[1]).map(m=>monTag(m[0],m[1])).join('')}</span></button>`;}).join('')
-    +(idx.length>RT.shown?`<button class="btn ghost rtmore" id="rtMore">${T('Show more')}</button>`:'')+(idx.length?'':`<p class="empty">${T('No teams match.')}</p>`);}
-$('rtEv').innerHTML='<option value="all">'+T('All events')+'</option>'+EVN.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');
-$('rtEv').addEventListener('change',e=>{RT.ev=e.target.value;RT.shown=40;renderRT();});
-$('rtD2').addEventListener('change',e=>{RT.d2=e.target.checked;RT.shown=40;renderRT();});
-$('rtQ').addEventListener('input',e=>{RT.q=e.target.value;RT.shown=40;renderRT();});
-$('rtb').addEventListener('toggle',()=>{if($('rtb').open)renderRT();});
-$('rtList').addEventListener('click',e=>{if(e.target.closest('#rtMore')){RT.shown+=40;renderRT();return;}
-  const b=e.target.closest('[data-rt]');if(!b)return;const t=DATA.T[+b.dataset.rt];
+// Regional team picker (event filter, Day 2 toggle, player/Pokémon search, clickable list). Used by Team Building and the Regional Team Tester.
+function TeamPicker(p,onPick,isSel){const S={ev:'all',d2:false,q:'',shown:40};
+  const match=t=>{if(S.ev!=='all'&&t[0]!==S.ev)return false;if(S.d2&&!t[3])return false;const q=S.q.trim().toLowerCase();if(!q)return true;
+    if(t[2].toLowerCase().includes(q))return true;return t[4].some(m=>m[0].toLowerCase().includes(q)||dn(m[0]).toLowerCase().includes(q));};
+  function render(){const L=$(p+'List');if(!L)return;const idx=[];DATA.T.forEach((t,i)=>{if(match(t))idx.push(i);});
+    idx.sort((a,b)=>DATA.T[a][1]-DATA.T[b][1]||EVN.indexOf(DATA.T[a][0])-EVN.indexOf(DATA.T[b][0]));
+    $(p+'Count').textContent=T('{k} teams',{k:idx.length});
+    L.innerHTML=idx.slice(0,S.shown).map(i=>{const t=DATA.T[i];return `<button class="rtrow${isSel&&isSel(i)?' sel':''}" data-rt="${i}" aria-label="${esc(T('Load {p}\'s team',{p:t[2]}))}"><span class="rtp"><b>${esc(t[2])}</b><small>${esc(t[0])} · #${t[1]}${t[3]?' · '+T('Day 2'):''}</small></span><span class="rtm">${t[4].filter(m=>m[1]).map(m=>monTag(m[0],m[1])).join('')}</span></button>`;}).join('')
+      +(idx.length>S.shown?`<button class="btn ghost rtmore" data-rtmore="1">${T('Show more')}</button>`:'')+(idx.length?'':`<p class="empty">${T('No teams match.')}</p>`);}
+  $(p+'Ev').innerHTML='<option value="all">'+T('All events')+'</option>'+EVN.map(e=>`<option value="${esc(e)}">${esc(e)}</option>`).join('');
+  $(p+'Ev').addEventListener('change',e=>{S.ev=e.target.value;S.shown=40;render();});
+  $(p+'D2').addEventListener('change',e=>{S.d2=e.target.checked;S.shown=40;render();});
+  $(p+'Q').addEventListener('input',e=>{S.q=e.target.value;S.shown=40;render();});
+  $(p+'List').addEventListener('click',e=>{if(e.target.closest('[data-rtmore]')){S.shown+=40;render();return;}const b=e.target.closest('[data-rt]');if(b)onPick(+b.dataset.rt);});
+  return {render,S};}
+const RTP=TeamPicker('rt',i=>{const t=DATA.T[i];
   team=[0,1,2,3,4,5].map(k=>{const m=t[4][k];return m&&m[1]?mkSlot({name:m[0],f:m[2],c:m[3]}):null;});saveTeam();
   $('rtb').open=false;teamSlots.render();renderTeam();window.scrollTo({top:$('teamSlots').getBoundingClientRect().top+window.scrollY-120,behavior:RM?'auto':'smooth'});
   toast(T('Loaded {p}\'s team ({e} #{n})',{p:t[2],e:t[0],n:t[1]}));});
+$('rtb').addEventListener('toggle',()=>{if($('rtb').open)RTP.render();});
+const OPP=TeamPicker('op',i=>{oppIdx=TEAMS.indexOf(DATA.T[i]);if(oppIdx<0)oppIdx=i;oppMode='real';saveOpp();$('opb').open=false;renderPreviewInputs();renderPreview();
+  const t=DATA.T[i];toast(T('Testing against {p} ({e} #{n})',{p:t[2],e:t[0],n:t[1]}));},i=>TEAMS[oppIdx]===DATA.T[i]);
+$('opb').addEventListener('toggle',()=>{if($('opb').open){OPP.render();setTimeout(()=>{const q=$('opQ');if(q&&matchMedia('(hover:hover)').matches)q.focus();},0);}});
 // init
 
 $('teamNames').innerHTML=TEAMS.map(t=>`<option value="${esc(teamLabel(t))}">`).join('');

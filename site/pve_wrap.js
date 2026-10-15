@@ -51,6 +51,43 @@ function run(A,B,o){o=o||{};var P=[poke(A,0),poke(B,1)];__battle.setNewPokemon(P
   return res;}
 function battle(A,B,s0,s1){return run(A,B,{sh:[s0,s1]}).rating;}
 function clear(){__cache.clear();}
-return {init:init,run:run,battle:battle,clear:clear};
+// ---- detailed battle for the timeline, playback and PvPoke's Sandbox Mode (its own Battle instance, never cached)
+// o: as run() plus actions: null (automatic battle) or [{type:'charged'|'wait', actor, turn, value, shielded, buffs, charge}]
+// Returns run()'s fields plus ev (every timeline event), actions (the battle as editable actions, as PvPoke's Sandbox Mode
+// creates them), and link (the same battle on pvpoke.com).
+var CHARGE=[1,.95,.75,.5,.25];
+function mk(s,i,b){var p=new Pokemon(s[0],i,b);p.initialize(1500);p.setLevel(s[3][0]);p.setIV('atk',s[3][1]);p.setIV('def',s[3][2]);p.setIV('hp',s[3][3]);
+  p.selectMove('fast',s[1]);p.selectMove('charged',s[2][0]||'none',0);p.selectMove('charged',s[2][1]||'none',1);return p;}
+function detail(A,B,o){o=o||{};var bt=new Battle(),sand=!!o.actions;bt.setCP(1500);bt.setLevelCap(51); // a fresh Battle each time: Sandbox Mode changes battle-wide settings
+  var P=[mk(A,0,bt),mk(B,1,bt)];bt.setNewPokemon(P[0],0,false);bt.setNewPokemon(P[1],1,false);
+  for(var i=0;i<2;i++){var p=P[i];p.setShields(o.sh?o.sh[i]:1);p.startHp=o.hp?Math.max(1,Math.min(o.hp[i],p.stats.hp)):p.stats.hp;p.startEnergy=o.en?Math.min(100,o.en[i]||0):0;
+    p.startCooldown=0;p.startStatBuffs=o.st?[o.st[i][0],o.st[i][1]]:[0,0];p.baitShields=o.bait?(o.bait[i]?1:0):1;}
+  __TL=true;
+  if(sand){bt.setSandboxMode(true);bt.setActions(o.actions.map(function(a){return new TimelineAction(a.type,a.actor,a.turn,a.value,a.type==='charged'?{shielded:!!a.shielded,buffs:!!a.buffs,charge:a.charge||1,priority:P[a.actor].priority}:{});}));}
+  bt.simulate();var tl=bt.getTimeline().slice();__TL=false;
+  var h=[Math.max(0,P[0].hp),Math.max(0,P[1].hp)],r=[P[0].getBattleRating(),P[1].getBattleRating()];
+  var res={rating:r[0],ratings:r,hp:h,en:[P[0].energy,P[1].energy],sh:[P[0].shields,P[1].shields],turns:bt.getTurns(),maxhp:[P[0].stats.hp,P[1].stats.hp],start:{hp:[P[0].startHp,P[1].startHp],en:[P[0].startEnergy,P[1].startEnergy],sh:[P[0].startingShields,P[1].startingShields]}};
+  var ev=[],shp=[false,false];
+  for(var k=0;k<tl.length;k++){var e=tl[k],t=e.type||'',v=e.values||[];
+    if(t==='tap interaction'||t==='tap interaction wait'){ev.push({k:t==='tap interaction'?'tap':'wait',i:e.actor,t:e.turn});continue;}
+    if(t==='shield'){shp[e.actor]=true;ev.push({k:'shield',i:e.actor,t:e.turn});continue;}
+    if(t==='faint'){ev.push({k:'faint',i:e.actor,t:e.turn});continue;}
+    var m=/^(fast|charged) /.exec(t);if(!m)continue;var mid=__names[e.name]||e.name,j=1-e.actor;
+    var x={k:m[1],i:e.actor,t:e.turn,m:mid,d:+v[0]||0,e:+v[1]||0,p:+v[2]||0};
+    for(var q=3;q<v.length;q++){if(v[q]==='Form Change')x.form=true;else if(typeof v[q]==='string'&&v[q])x.buff=v[q];}
+    if(m[1]==='charged'){x.sd=shp[j];shp[j]=false;x.edit=e.editable!==false;}
+    ev.push(x);}
+  res.ev=ev;
+  // the battle as editable actions (what PvPoke's Sandbox Mode starts from), with any invalid user actions dropped
+  var acts=sand?bt.getActions():bt.convertTimelineToActions();
+  res.actions=acts.filter(function(a){return a.type==='charged'||a.type==='wait';}).map(function(a){var s=a.settings||{};return a.type==='charged'?{type:'charged',actor:a.actor,turn:a.turn,value:a.value,shielded:!!s.shielded,buffs:!!s.buffs,charge:s.charge||1,valid:sand?!!a.valid:true}:{type:'wait',actor:a.actor,turn:a.turn,value:0,valid:sand?!!a.valid:true};});
+  // pvpoke.com link for this exact battle (and Sandbox Mode actions)
+  try{var ps=P.map(function(p){return p.generateURLPokeStr();}),ms=P.map(function(p){return p.generateURLMoveStr();});
+    var cap=o.cap&&o.cap!==50?'1500-'+o.cap:'1500';var L='battle/'+(sand?'sandbox/':'')+cap+'/'+ps[0]+'/'+ps[1]+'/'+P[0].startingShields+P[1].startingShields+'/'+ms[0]+'/'+ms[1]+'/';
+    if(P[0].startHp!==P[0].stats.hp||P[1].startHp!==P[1].stats.hp||P[0].startEnergy||P[1].startEnergy)L+=P[0].startHp+'-'+P[1].startHp+'/'+P[0].startEnergy+'-'+P[1].startEnergy+'/';
+    if(sand){var as=res.actions.filter(function(a){return a.valid;}).map(function(a){return a.turn+'.'+(a.type==='charged'?1:2)+a.actor+a.value+(a.shielded?1:0)+(a.buffs?1:0)+Math.max(0,CHARGE.indexOf(a.charge||1));}).join('-');L+=(as||'0')+'/';}
+    res.link='https://pvpoke.com/'+L;}catch(err){res.link=null;}
+  return res;}
+return {init:init,run:run,battle:battle,clear:clear,detail:detail};
 })();
 if(typeof module!=='undefined')module.exports=PVE;

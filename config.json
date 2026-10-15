@@ -23,6 +23,11 @@
       "name": "Recife",
       "file": "Pokémon_GO_Recife_Regional_Championships_2027___Dracoviz.htm",
       "day2_cutoff": 9
+    },
+    {
+      "name": "Louisville",
+      "file": "Pokémon_GO_Louisville_Regional_Championships_2027___Dracoviz.htm",
+      "day2_cutoff": 9
     }
   ],
   "anti_meta_net_cutoff": -0.2,

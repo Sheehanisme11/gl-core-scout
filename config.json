@@ -33,6 +33,11 @@
       "name": "Nice",
       "file": "Pokémon_GO_Nice_Regional_Championships_2027___Dracoviz.htm",
       "day2_cutoff": 9
+    },
+    {
+      "name": "Puebla",
+      "file": "Pokémon_GO_Puebla_Regional_Championships_2027___Dracoviz.htm",
+      "day2_cutoff": 9
     }
   ],
   "anti_meta_net_cutoff": -0.2,

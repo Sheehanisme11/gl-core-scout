@@ -989,4 +989,7 @@ D += [
 ("Not allowed at Play! Pokémon events (banned list):","No permitido en eventos Play! Pokémon (lista de prohibidos):","Play! Pokémonの大会では使えません（禁止リスト）："),
 ("Advice and suggestions leave out Pokémon on the Play! Pokémon banned list:","Los consejos y sugerencias excluyen a los Pokémon de la lista de prohibidos de Play! Pokémon:","アドバイスと提案では、Play! Pokémonの禁止リストにあるポケモンを除外しています："),
 ("Official list","Lista oficial","公式リスト"),
+("Advice and suggestions leave out the {n} Pokémon and moves on the Play! Pokémon banned list.","Los consejos y sugerencias excluyen los {n} Pokémon y movimientos de la lista de prohibidos de Play! Pokémon.","アドバイスと提案では、Play! Pokémonの禁止リストにある{n}件のポケモンと技を除外しています。"),
+("Shadow allowed","Oscuro permitido","シャドウは使用可"),
+("Giratina (Altered Forme) is banned when Purified. The site can't tell a Purified Pokémon from a regular one, so regular Giratina (Altered) is still suggested: don't bring a Purified one.","Giratina (Forma Modificada) está prohibido si es Purificado. El sitio no distingue un Pokémon Purificado de uno normal, así que Giratina (Modificada) normal se sigue sugiriendo: no lleves uno Purificado.","ギラティナ（アナザーフォルム）はリトレーンだと使用禁止です。サイトではリトレーンと通常の区別ができないため、通常のギラティナ（アナザー）は提案に残ります。リトレーンのものは使わないでください。"),
 ]

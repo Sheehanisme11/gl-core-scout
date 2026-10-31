@@ -46,28 +46,228 @@
   "banned": [
     {
       "id": "minior*",
-      "name": "Minior (all forms)",
-      "added": "2026-10"
+      "name": "Minior"
+    },
+    {
+      "id": "mimikyu*",
+      "name": "Mimikyu"
+    },
+    {
+      "id": "cobalion*",
+      "name": "Cobalion"
+    },
+    {
+      "id": "terrakion*",
+      "name": "Terrakion"
+    },
+    {
+      "id": "virizion*",
+      "name": "Virizion"
+    },
+    {
+      "id": "reshiram*",
+      "name": "Reshiram"
+    },
+    {
+      "id": "zekrom*",
+      "name": "Zekrom"
+    },
+    {
+      "id": "landorus_incarnate",
+      "name": "Landorus (Incarnate)",
+      "shadow_allowed": true
+    },
+    {
+      "id": "landorus_therian*",
+      "name": "Landorus (Therian)"
+    },
+    {
+      "id": "kyurem*",
+      "name": "Kyurem (all forms)"
+    },
+    {
+      "id": "tapu_koko*",
+      "name": "Tapu Koko"
+    },
+    {
+      "id": "tapu_lele*",
+      "name": "Tapu Lele"
+    },
+    {
+      "id": "tapu_bulu*",
+      "name": "Tapu Bulu"
+    },
+    {
+      "id": "solgaleo*",
+      "name": "Solgaleo"
+    },
+    {
+      "id": "lunala*",
+      "name": "Lunala"
+    },
+    {
+      "id": "zacian*",
+      "name": "Zacian (all forms)"
+    },
+    {
+      "id": "zamazenta*",
+      "name": "Zamazenta (all forms)"
+    },
+    {
+      "id": "enamorus_incarnate*",
+      "name": "Enamorus (Incarnate)"
+    },
+    {
+      "id": "enamorus_therian*",
+      "name": "Enamorus (Therian)"
+    },
+    {
+      "id": "groudon",
+      "name": "Groudon",
+      "shadow_allowed": true
+    },
+    {
+      "id": "kyogre",
+      "name": "Kyogre",
+      "shadow_allowed": true
+    },
+    {
+      "id": "dialga",
+      "name": "Dialga",
+      "shadow_allowed": true
+    },
+    {
+      "id": "dialga_origin*",
+      "name": "Dialga (Origin)"
+    },
+    {
+      "id": "palkia",
+      "name": "Palkia",
+      "shadow_allowed": true
+    },
+    {
+      "id": "palkia_origin*",
+      "name": "Palkia (Origin)"
+    },
+    {
+      "id": "thundurus_incarnate",
+      "name": "Thundurus (Incarnate)",
+      "shadow_allowed": true
+    },
+    {
+      "id": "thundurus_therian*",
+      "name": "Thundurus (Therian)"
+    },
+    {
+      "id": "tornadus_incarnate",
+      "name": "Tornadus (Incarnate)",
+      "shadow_allowed": true
+    },
+    {
+      "id": "tornadus_therian*",
+      "name": "Tornadus (Therian)"
+    },
+    {
+      "id": "mewtwo",
+      "name": "Mewtwo",
+      "shadow_allowed": true
     },
     {
       "id": "ponyta_shadow",
-      "name": "Ponyta (Shadow)",
-      "added": "2026-01"
+      "name": "Ponyta (Shadow)"
     },
     {
       "id": "rapidash_shadow",
-      "name": "Rapidash (Shadow)",
-      "added": "2026-01"
+      "name": "Rapidash (Shadow)"
     },
     {
       "id": "kabuto_shadow",
-      "name": "Kabuto (Shadow)",
-      "added": "2026-01"
+      "name": "Kabuto (Shadow)"
     },
     {
       "id": "kabutops_shadow",
-      "name": "Kabutops (Shadow)",
-      "added": "2026-01"
+      "name": "Kabutops (Shadow)"
+    },
+    {
+      "id": "volcanion*",
+      "name": "Volcanion"
+    },
+    {
+      "id": "ditto*",
+      "name": "Ditto"
+    },
+    {
+      "id": "shedinja*",
+      "name": "Shedinja"
+    },
+    {
+      "id": "xerneas*",
+      "name": "Xerneas"
+    },
+    {
+      "id": "yveltal*",
+      "name": "Yveltal"
+    },
+    {
+      "id": "mudbray*",
+      "name": "Mudbray"
+    },
+    {
+      "id": "mudsdale*",
+      "name": "Mudsdale"
+    },
+    {
+      "id": "grimer*",
+      "name": "Grimer with Acid",
+      "fast": "ACID"
+    },
+    {
+      "id": "muk*",
+      "name": "Muk with Acid",
+      "fast": "ACID"
+    },
+    {
+      "id": "koffing*",
+      "name": "Koffing with Acid",
+      "fast": "ACID"
+    },
+    {
+      "id": "weezing*",
+      "name": "Weezing with Acid",
+      "fast": "ACID"
+    },
+    {
+      "id": "chansey*",
+      "name": "Chansey with Psybeam",
+      "charged": "PSYBEAM"
+    },
+    {
+      "id": "staryu*",
+      "name": "Staryu with Quick Attack",
+      "fast": "QUICK_ATTACK"
+    },
+    {
+      "id": "starmie*",
+      "name": "Starmie with Quick Attack",
+      "fast": "QUICK_ATTACK"
+    },
+    {
+      "id": "porygon",
+      "name": "Porygon with Quick Attack",
+      "fast": "QUICK_ATTACK"
+    },
+    {
+      "id": "porygon_shadow",
+      "name": "Porygon (Shadow) with Quick Attack",
+      "fast": "QUICK_ATTACK"
+    },
+    {
+      "id": "pichu*",
+      "name": "Pichu with Quick Attack",
+      "fast": "QUICK_ATTACK"
     }
+  ],
+  "banned_notes": [
+    "Giratina (Altered Forme) is banned when Purified. The site can't tell a Purified Pokémon from a regular one, so regular Giratina (Altered) is still suggested: don't bring a Purified one."
   ]
 }

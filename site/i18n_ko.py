@@ -1067,4 +1067,7 @@ KO = {
 "Not allowed at Play! Pokémon events (banned list):": "Play! Pokémon 대회에서 사용할 수 없음(금지 목록):",
 "Advice and suggestions leave out Pokémon on the Play! Pokémon banned list:": "조언과 추천에서는 Play! Pokémon 금지 목록의 포켓몬을 제외합니다:",
 "Official list": "공식 목록",
+"Advice and suggestions leave out the {n} Pokémon and moves on the Play! Pokémon banned list.": "조언과 추천에서는 Play! Pokémon 금지 목록의 포켓몬과 기술 {n}개를 제외합니다.",
+"Shadow allowed": "섀도는 허용",
+"Giratina (Altered Forme) is banned when Purified. The site can't tell a Purified Pokémon from a regular one, so regular Giratina (Altered) is still suggested: don't bring a Purified one.": "기라티나(어나더폼)는 정화 상태일 때 금지입니다. 사이트에서는 정화 포켓몬과 일반 포켓몬을 구분할 수 없어 일반 기라티나(어나더폼)는 계속 추천됩니다. 정화된 개체는 쓰지 마세요.",
 }

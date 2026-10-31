@@ -888,7 +888,7 @@ function setLang(l){LANG=l;try{localStorage.setItem('gl_lang',l);}catch(e){}docu
 // ---------- tabs + settings
 // ---------- BATTLE MATRIX (Group A vs Group B, PvPoke-style)
 // Entry: {sid, f, c:[c1,c2], iv:[a,d,s]|null, lv:number|null}. iv null = PvPoke default IVs for Great League.
-const MXMAX=300;
+const MXMAX=500;
 let MX={A:[],B:[],sa:1,sb:1,cap:50,show:'r',sortR:'g',sortC:'g',open:{A:-1,B:-1},imp:{A:false,B:false}};
 try{const o=JSON.parse(localStorage.getItem('gl_mx')||'null');if(o&&Array.isArray(o.A)){Object.assign(MX,{A:o.A,B:o.B||[],sa:o.sa??1,sb:o.sb??1,cap:o.cap||50,show:o.show||'r'});}}catch(e){}
 function mxSave(){try{localStorage.setItem('gl_mx',JSON.stringify({A:MX.A,B:MX.B,sa:MX.sa,sb:MX.sb,cap:MX.cap,show:MX.show}));}catch(e){}}
@@ -978,7 +978,7 @@ function presetGroups(){const n=k=>presetData(k).length;
     [T('Each regional'),EVN.map(e=>['ev:'+e,T('{e}: every Pokémon',{e})])],
     [T('Each regional, Day 2'),EVN.map(e=>['evd2:'+e,T('{e} Day 2',{e})])],
     [T('Trends'),[['rise',T('Trending up (includes 0%)')],['fall',T('Trending down (includes 0%)')]]],
-    [T('Anti-meta and ladder'),[['anti',T('Anti-meta pool (your setting)')],['pv50',T('PvPoke Great League rankings: top 50')],['pv100',T('PvPoke Great League rankings: top 100')],['pv200',T('PvPoke Great League rankings: top 200')],['pv300',T('PvPoke Great League rankings: top 300')]]],
+    [T('Anti-meta and ladder'),[['anti',T('Anti-meta pool (your setting)')],['pv50',T('PvPoke Great League rankings: top 50')],['pv100',T('PvPoke Great League rankings: top 100')],['pv200',T('PvPoke Great League rankings: top 200')],['pv300',T('PvPoke Great League rankings: top 300')],['pv500',T('PvPoke Great League rankings: top 500')]]],
     [T('Yours'),[['team',T('My team (Team Building)')]]]].map(([g,opts])=>[g,opts.map(([k,l])=>[k,l,n(k)])]);}
 function presetOptions(sel,skip){skip=skip||[];return presetGroups().map(([g,opts])=>{const o=opts.filter(x=>!skip.includes(x[0]));return o.length?`<optgroup label="${esc(g)}">${o.map(([k,l,c])=>`<option value="${esc(k)}"${k===sel?' selected':''}>${esc(l)} (${c})</option>`).join('')}</optgroup>`:'';}).join('');}
 // --- group editor
@@ -1644,7 +1644,7 @@ function renderIVs(){const el=$('ivIn');if(!el)return;const sid=IVP.sid,gl=IVP.l
     <label class="fld">${T('Level cap')} <select id="ivCap">${[40,41,50,51].map(c=>`<option value="${c}"${c===IVP.cap?' selected':''}>${c}${c===51?' ('+T('best buddy')+')':''}</option>`).join('')}</select></label>
     <label class="fld">${T('IV floor')} <select id="ivFl">${IVFLOORS.map(([v,l])=>`<option value="${v}"${v===IVP.fl?' selected':''}>${esc(T(l))}</option>`).join('')}</select></label></div>
    ${gl?`<div class="mxctl"><label class="fld">${T('Shields')} ${seg('sh',IVP.sh,[['avg',T('Average')],[0,'0v0'],[1,'1v1'],[2,'2v2']])}</label>
-    <label class="fld">${T('Against')} <select id="ivOpp"><option value="reg3"${IVP.opp==='reg3'?' selected':''}>${T('Regional meta: on 3+ teams')} (${Mx.filter(m=>m.u>=3).length})</option>${presetOptions(IVP.opp,['team','reg25','reg50','reg100','pv50','pv200','pv300'])}</select></label></div>`:''}
+    <label class="fld">${T('Against')} <select id="ivOpp"><option value="reg3"${IVP.opp==='reg3'?' selected':''}>${T('Regional meta: on 3+ teams')} (${Mx.filter(m=>m.u>=3).length})</option>${presetOptions(IVP.opp,['team','reg25','reg50','reg100','pv50','pv200','pv300','pv500'])}</select></label></div>`:''}
    <div class="mxgo"><button class="btn" id="ivGo">${gl?T('Find the best IVs'):T('Show stat product ranks')}</button>${IVJOB?`<div class="mxprog" id="ivProg"><i style="width:0%"></i></div><span class="num" id="ivStat" style="color:var(--muted)"></span>`:''}</div></div>`;
   if(IVRES&&IVRES.sig===ivpSig())renderIVRes();else{$('ivOut').innerHTML=IVRES?`<p class="empty">${T('Settings changed: press the button to update.')}</p>`:'';}}
 async function ivpRun(){const sid=IVP.sid,gl=IVP.lg==='gl',cpcap=gl?1500:2500,sig=ivpSig();

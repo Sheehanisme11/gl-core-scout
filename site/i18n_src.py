@@ -456,8 +456,8 @@ D += [
 ("{c} beats the most threats ({a} of {b}), but every swap for it lowers core coverage elsewhere, so check the trade-off below.","{c} vence a más amenazas ({a} de {b}), pero cada cambio por él baja la cobertura de núcleos en otro sitio; revisa el equilibrio abajo.","{c}が最も多くの脅威に勝ちます（{b}体中{a}体）が、どの入れ替えでも他のコア対策率が下がります。下で損得を確認してください。"),
 # battle matrix
 ('Battle matrix','Matriz de combates','バトルマトリクス'),
-('Any group against any group, up to 300 each, with your own IVs and shields. Exports to Excel.','Cualquier grupo contra cualquier grupo, hasta 300 cada uno, con tus IV y escudos. Se exporta a Excel.','どんなグループ同士でも対戦（各300体まで）。個体値とシールドを自由に設定、Excelに出力できます。'),
-("Battle matrix: every Pokémon in Group A battles every Pokémon in Group B, the same way PvPoke's matrix works. Up to 300 per group, shields set separately for each side, your own IVs, and a download that opens in Excel. Groups import and export in PvPoke's format, so you can copy them between the two sites.",'Matriz de combates: cada Pokémon del Grupo A combate contra cada Pokémon del Grupo B, igual que la matriz de PvPoke. Hasta 300 por grupo, escudos para cada lado por separado, tus propios IV y una descarga que se abre en Excel. Los grupos se importan y exportan en el formato de PvPoke, así que puedes copiarlos entre los dos sitios.','バトルマトリクス：グループAの全ポケモンとグループBの全ポケモンを、PvPokeのマトリクスと同じ方法で総当たりさせます。各グループ300体まで、シールドは両側で個別に設定、個体値も自由、Excelで開けるファイルをダウンロードできます。グループはPvPoke形式で読み込み・書き出しできるので、2つのサイト間でコピーできます。'),
+('Any group against any group, up to 500 each, with your own IVs and shields. Exports to Excel.','Cualquier grupo contra cualquier grupo, hasta 500 cada uno, con tus IV y escudos. Se exporta a Excel.','どんなグループ同士でも対戦（各500体まで）。個体値とシールドを自由に設定、Excelに出力できます。'),
+("Battle matrix: every Pokémon in Group A battles every Pokémon in Group B, the same way PvPoke's matrix works. Up to 500 per group, shields set separately for each side, your own IVs, and a download that opens in Excel. Groups import and export in PvPoke's format, so you can copy them between the two sites.",'Matriz de combates: cada Pokémon del Grupo A combate contra cada Pokémon del Grupo B, igual que la matriz de PvPoke. Hasta 500 por grupo, escudos para cada lado por separado, tus propios IV y una descarga que se abre en Excel. Los grupos se importan y exportan en el formato de PvPoke, así que puedes copiarlos entre los dos sitios.','バトルマトリクス：グループAの全ポケモンとグループBの全ポケモンを、PvPokeのマトリクスと同じ方法で総当たりさせます。各グループ500体まで、シールドは両側で個別に設定、個体値も自由、Excelで開けるファイルをダウンロードできます。グループはPvPoke形式で読み込み・書き出しできるので、2つのサイト間でコピーできます。'),
 ('The matrix sets its own shields below; the close margin here still colours the results.','La matriz fija sus propios escudos abajo; el margen de ajustado de aquí sigue coloreando los resultados.','マトリクスのシールドは下で個別に設定します。ここの僅差の幅は結果の色分けに使われます。'),
 ('A win is a rating above 500; close results are within your margin.','Una victoria es una puntuación por encima de 500; los resultados ajustados están dentro de tu margen.','評価値500超が勝ち。僅差は設定した幅以内の結果です。'),
 ('Add a Pokémon','Añadir un Pokémon','ポケモンを追加'),
@@ -515,6 +515,7 @@ D += [
 ('PvPoke Great League rankings: top 100','Clasificación de PvPoke Liga Super Ball: top 100','PvPokeスーパーリーグランキング：上位100'),
 ('PvPoke Great League rankings: top 200','Clasificación de PvPoke Liga Super Ball: top 200','PvPokeスーパーリーグランキング：上位200'),
 ('PvPoke Great League rankings: top 300','Clasificación de PvPoke Liga Super Ball: top 300','PvPokeスーパーリーグランキング：上位300'),
+('PvPoke Great League rankings: top 500','Clasificación de PvPoke Liga Super Ball: top 500','PvPokeスーパーリーグランキング：上位500'),
 ('PvPoke default IVs','IV por defecto de PvPoke','PvPokeの初期個体値'),
 ('Rank 1 stat product','Rango 1 de producto de estadísticas','SCP順位1位'),
 ('Ratings','Puntuaciones','評価値'),

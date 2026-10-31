@@ -470,6 +470,10 @@ dialog#shareDlg::backdrop{background:rgba(8,12,20,.6)}
   /* battle matrix */
   .mxgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px}
   .mxg{display:grid;gap:10px;align-content:start}
+  .tph{font-size:16px;margin:0 0 8px}.tplist{margin:0 0 8px;padding-left:20px;display:grid;gap:6px}.tplist li{line-height:1.6}
+  .tpbar{position:relative;display:block;height:14px;border-radius:4px;background:var(--sunk);overflow:hidden}.tpbar i{position:absolute;left:0;top:0;bottom:0}.tpbar i.f{background:var(--accent);opacity:.85}.tpbar i.a{top:auto;height:4px;background:var(--ink);opacity:.55}
+  .tpev summary{cursor:pointer;display:flex;gap:10px;align-items:baseline}.tpevg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px;margin-top:12px}
+  .tpteam{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;min-width:0}.tpmons{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:8px}
   .mxg,.mxg .controls,.mxg .fld{min-width:0;max-width:100%}.mxg select{max-width:100%}
   .mylist{display:grid;gap:6px;margin-top:6px}.myrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}.mynm{overflow-wrap:anywhere}.mysub{color:var(--muted);font-size:12px}.mybtns{display:flex;flex-wrap:wrap;gap:4px 12px;margin-left:auto}
   .mxgh{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
@@ -687,6 +691,7 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
     <button role="tab" data-v="lab" id="t-lab">Pokémon Analysis</button>
     <button role="tab" data-v="team" id="t-team">Team Building</button>
     <button role="tab" data-v="preview" id="t-preview">Regional Team Tester</button>
+    <button role="tab" data-v="final" id="t-final">Top teams</button>
     <button role="tab" data-v="gbl" id="t-gbl">GBL team builder</button>
     <button role="tab" data-v="matrix" id="t-matrix">Battle matrix</button>
     <button role="tab" data-v="sandbox" id="t-sandbox">Battle sandbox</button>
@@ -805,6 +810,11 @@ details.formcmp p{margin:6px 0;color:var(--muted)}
   <div class="controls"><button class="btn ghost" id="teamToLab">Open in Pokémon Analysis</button><button class="link" id="teamReset">Reset to example team</button><button class="link" id="teamClear">Clear all</button></div>
   <details class="imp"><summary>Load a shared team</summary><div class="controls"><input type="text" id="impQ" placeholder="Paste a team link or code" style="flex:1;min-width:min(260px,100%)"><button class="btn ghost" id="impGo">Load</button></div></details>
   <div id="teamOut" style="display:grid;gap:16px"></div>
+</section>
+
+<section class="view" id="v-final" hidden>
+  <p class="lede">Top teams: what the teams that finished first and second at each regional had in common, compared with everyone else. Use it to spot team-building patterns before your next regional: the Pokémon and pairs that keep reaching the final, how many Shadows and meta picks they ran, their typing, and how their matchups compare with the field.</p>
+  <div id="tpOut" style="display:grid;gap:16px"></div>
 </section>
 
 <section class="view" id="v-preview" hidden>

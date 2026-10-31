@@ -32,7 +32,12 @@ const metaIdx={};Mx.forEach((m,i)=>metaIdx[m.n]=i);
 const candIdx={};Cx.forEach((c,i)=>{if(!(c.n in candIdx)||c.src===0)candIdx[c.n]=i;});
 let ANTICUT=-0.2;try{const s=JSON.parse(localStorage.getItem('gl_set')||'{}');if(s.ac!=null)ANTICUT=s.ac;}catch(e){}
 const NETS=DATA.NET||[];
-const okCommon=c=>Cx[c].src===0&&Cx[c].u>=3, okAnti=c=>Cx[c].src===1&&Cx[c].u<3&&NETS[c]>=ANTICUT, inAntiFloor=c=>Cx[c].src===1&&Cx[c].u<3&&NETS[c]>=-0.2;
+// Play! Pokémon banned list (config.json "banned"): banned Pokémon (or Pokémon + move) are never suggested for regional teams
+const BANL=((DATA.ban||{}).list||[]).map(b=>Object.assign({},b,{re:new RegExp('^'+String(b.id).replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*')+'$')}));
+function banOf(sid,f,c){for(const b of BANL){if(!b.re.test(sid))continue;if(b.fast&&b.fast!==f)continue;if(b.charged&&!(c||[]).includes(b.charged))continue;return b;}return null;}
+const isBanned=(sid,f,c)=>!!banOf(sid,f,c),banC=c=>isBanned(Cx[c].sid,Cx[c].f,Cx[c].c);
+const banTag=(sid,f,c)=>{const b=banOf(sid,f,c);return b?` <span class="tag ban" title="${esc(T('Banned in Play! Pokémon Championship Series events'))}">${T('Banned')}</span>`:'';};
+const okCommon=c=>Cx[c].src===0&&Cx[c].u>=3&&!banC(c), okAnti=c=>Cx[c].src===1&&Cx[c].u<3&&NETS[c]>=ANTICUT&&!banC(c), inAntiFloor=c=>Cx[c].src===1&&Cx[c].u<3&&NETS[c]>=-0.2;
 const BUILD_CACHE=new Map();
 function bld(sid,f,c){const k=sid+'|'+f+'|'+c.join(',');let b=BUILD_CACHE.get(k);if(!b){b=SIM.build(sid,f,c);BUILD_CACHE.set(k,b);}return b;}
 const metaB=i=>bld(Mx[i].sid,Mx[i].f,Mx[i].c), candB=c=>bld(Cx[c].sid,Cx[c].f,Cx[c].c);
@@ -518,7 +523,8 @@ function renderTeam(){const out=$('teamOut');const units=teamUnits();
   const tok=++teamToken;out.innerHTML='<p class="busy">Checking your team…</p>';
   setTimeout(()=>{if(tok!==teamToken)return;
   const e=teamEval(units);
-  let h=(units.length>=3?`<div class="sharebar"><button class="btn" data-share="team">${T('Share team card')}</button><span>${T('A picture of your team, its matchups and a link that loads it.')}</span></div>`:'')+metricRow(e,'team')+`<p class="lede">${T('An answer is a team member with no clear loss to anyone in the core (close losses count). Measured over {k} duo and trio cores used on 5+ teams, weighted by use, at {sc}. Custom movesets are simulated live.',{k:BIG().length,sc:scenLabel()})}${e.wr.bad.length?` <b style="color:var(--loss)">${T('Shared weaknesses needing another resist:')} ${e.wr.bad.map(typeTag).join(' ')}.</b>`:''}</p>`;
+  const bans=team.filter(Boolean).filter(x=>isBanned(x.sid,x.f,x.c));
+  let h=(bans.length?`<p class="banwarn">${T('Not allowed at Play! Pokémon events (banned list):')} ${bans.map(x=>esc(dn(x.name))).join(', ')}</p>`:'')+(units.length>=3?`<div class="sharebar"><button class="btn" data-share="team">${T('Share team card')}</button><span>${T('A picture of your team, its matchups and a link that loads it.')}</span></div>`:'')+metricRow(e,'team')+`<p class="lede">${T('An answer is a team member with no clear loss to anyone in the core (close losses count). Measured over {k} duo and trio cores used on 5+ teams, weighted by use, at {sc}. Custom movesets are simulated live.',{k:BIG().length,sc:scenLabel()})}${e.wr.bad.length?` <b style="color:var(--loss)">${T('Shared weaknesses needing another resist:')} ${e.wr.bad.map(typeTag).join(' ')}.</b>`:''}</p>`;
   // suggestions (teammate engine)
   if(units.length<6){const s=mateSuggest(units,8);
     h+=`<div class="card"><h3 style="font-size:18px;margin-bottom:4px">${T('Best teammates for the next slot')}</h3><p class="lede" style="font-size:13px">${units.length<=2?T('Looking for partners that cover your Pokémon\'s weaknesses by typing and/or moves, and that your Pokémon covers in return. Having both is ideal. Every member counts equally.'):T('Now also looking at the whole team: threats only one member handles, the weak spots several members share, and giving every member a partner.')} ${T('Each pick has to be at least decent in the meta. Rarely used Pokémon stay in the pool.')}</p><div class="mates">${s.res.map(x=>mateCard(x,s.ctx)).join('')}</div></div>`;
@@ -964,7 +970,7 @@ function renderTP(){const el=$('tpOut');if(!el)return;const G=tpGroups(),NF=G.F.
     <p class="why" style="margin-top:6px">${mine?T('"Your team" checks your six from Team Building.'):T('Add at least three Pokémon in Team Building to check your own team against these patterns.')}</p>`;
   // Pokémon table
   const monH=`<div class="tblwrap"><table class="vt"><thead><tr><th>${T('Pokémon')}</th><th class="r">${esc(T('Top teams'))}</th><th class="r">${esc(T('All teams'))}</th><th>${T('vs the field')}</th><th>${T('Where it finished')}</th><th>${T('Moveset on top teams')}</th></tr></thead><tbody>
-    ${mons.map(x=>`<tr><td>${monTag(x.n,x.sid)}</td><td class="r num"><b>${x.k}/${NF}</b> <span style="color:var(--muted)">${pct(x.sF)}</span></td><td class="r num">${pct(x.sA)}</td><td>${x.k>=2?tpLift(x.lift):`<span class="why" title="${esc(T('Only one top team: too few to compare.'))}">–</span>`}</td>
+    ${mons.map(x=>`<tr><td>${monTag(x.n,x.sid)}${banTag(x.sid)}</td><td class="r num"><b>${x.k}/${NF}</b> <span style="color:var(--muted)">${pct(x.sF)}</span></td><td class="r num">${pct(x.sA)}</td><td>${x.k>=2?tpLift(x.lift):`<span class="why" title="${esc(T('Only one top team: too few to compare.'))}">–</span>`}</td>
       <td><span class="sumline">${x.ev.map(([e,p])=>`<span class="tag">${esc(e)} #${p}</span>`).join('')}</span></td>
       <td><span class="sumline">${x.topMv.filter(Boolean).map(mvTag).join(' · ')}</span>${x.mvDiff?`<div class="why">${T('Most players used:')} ${x.fieldMv.filter(Boolean).map(m=>esc(mvName(m))).join(' · ')}</div>`:''}</td></tr>`).join('')}</tbody></table></div>`;
   const comboH=(L,empty)=>L.length?`<div class="tblwrap"><table class="vt"><thead><tr><th>${T('Pokémon')}</th><th class="r">${esc(T('Top teams'))}</th><th class="r">${T('Teams with it')}</th><th class="r">${T('Day 2')}</th><th>${T('vs the field')}</th></tr></thead><tbody>
@@ -988,7 +994,7 @@ function renderTP(){const el=$('tpOut');if(!el)return;const G=tpGroups(),NF=G.F.
     <div class="card"><h3 class="tph">${T('Patterns at a glance')}</h3><ul class="tplist">${pat.map(p=>`<li>${p}</li>`).join('')}</ul>
       <p class="why">${T('Small sample: {k} teams. Treat these as patterns worth testing, not rules.',{k:NF})}</p></div>
     <div class="card"><h3 class="tph">${T('What most top teams had in common')}</h3><p class="lede" style="font-size:13px;margin-bottom:8px">${T('Every pattern shared by at least 60% of the top teams, plus the Shadow, meta-pick, rare-pick and typing checks, with how common each one is across all teams. A pattern that is much more common on top teams than in the field is a stronger signal.')}</p>${bpH}</div>
-    <div class="tpadvh"><h2 class="tph" style="font-size:20px;margin:8px 0 0">${T('Advice: Pokémon and teams to try')}</h2></div><div id="tpAdv" style="display:grid;gap:16px"></div>
+    <div class="tpadvh"><h2 class="tph" style="font-size:20px;margin:8px 0 0">${T('Advice: Pokémon and teams to try')}</h2>${BANL.length?`<p class="why" style="margin-top:4px">${T('Advice and suggestions leave out Pokémon on the Play! Pokémon banned list:')} ${BANL.map(b=>esc(b.name||b.id)).join(', ')}. <a href="${esc((DATA.ban||{}).src||'#')}" target="_blank" rel="noopener">${T('Official list')}</a></p>`:''}</div><div id="tpAdv" style="display:grid;gap:16px"></div>
     <div class="card"><h3 class="tph">${T('Top teams vs the field')}</h3>${comp}</div>
     <div class="card"><h3 class="tph">${T('Pokémon on the top teams')}</h3><p class="lede" style="font-size:13px;margin-bottom:8px">${T('"vs the field" compares how often each Pokémon is on a top team with how often it is on any team: above ×1 means top teams used it more than everyone else.')}</p>${monH}</div>
     <div class="cols"><div class="card"><h3 class="tph">${T('Pairs on 2+ top teams')}</h3>${comboH(duos,T('No pair repeats yet.'))}</div><div class="card"><h3 class="tph">${T('Trios on 2+ top teams')}</h3>${comboH(trios,T('No trio repeats yet.'))}</div></div>
@@ -1023,14 +1029,14 @@ async function tpaRun(){const key=tpaKey();if(TPA&&TPA.key===key)return;const jo
   const ctx={rows,tg,pool:tpaPool(25),fk,used:new Map(),U:c=>{if(!UC.has(c))UC.set(c,tpaUnit(c));return UC.get(c);}};
   const mons=tpMonRows(G),duos=tpCombos(G,2),NF=G.F.length;const topName=TP.top===2?T('top-2 teams'):T('top-{n} teams',{n:TP.top});
   // Pokémon lists
-  const proven=mons.filter(x=>x.k>=2&&x.lift>=1.4&&candIdx[x.n]!==undefined).slice(0,8);
+  const proven=mons.filter(x=>x.k>=2&&x.lift>=1.4&&candIdx[x.n]!==undefined&&!banC(candIdx[x.n])).slice(0,8);
   const P=prTable(),metaAvg=c=>{let s=0,t=0;for(let m=0;m<NM;m++){s+=P[c*NM+m]*Mx[m].u;t+=Mx[m].u;}return s/t;};
   const vsTop=pool.map(c=>{const u=ctx.U(c),b=tpaBeat([u],tg);return {c,v:b.v,beat:tg.filter(x=>TW[tier(u.r(x.m))]>=.75).sort((a,b)=>b.k-a.k),avg:metaAvg(c)};});
   const answers=vsTop.filter(x=>x.avg>=480).sort((a,b)=>b.v-a.v||b.avg-a.avg);const seenA=new Set(),ans=[];for(const x of answers){const b=baseSp(Cx[x.c].n);if(seenA.has(b))continue;seenA.add(b);ans.push(x);if(ans.length>=8)break;}
   const favT=TYPES.filter(t=>tpShare(G.F,i=>tpComp(i).types.has(t))>=0.6);
   const sleep=vsTop.filter(x=>(TPCNT[Cx[x.c].n]||0)/NT<0.03&&typesOf(Cx[x.c].sid).some(t=>favT.includes(t))).sort((a,b)=>(b.avg+300*b.v)-(a.avg+300*a.v));const seenS=new Set(),sl=[];for(const x of sleep){const b=baseSp(Cx[x.c].n);if(seenS.has(b)||ans.some(y=>y.c===x.c))continue;seenS.add(b);sl.push(x);if(sl.length>=8)break;}
   // seeds for team ideas: repeated pairs, then proven singles, then the best answer to the top teams
-  const seeds=[];const addSeed=(names,why)=>{const cs=names.map(n=>candIdx[n]);if(cs.some(c=>c===undefined))return;if(seeds.some(s=>s.cs.length===cs.length&&s.cs.every(c=>cs.includes(c))))return;seeds.push({cs,why});};
+  const seeds=[];const addSeed=(names,why)=>{const cs=names.map(n=>candIdx[n]);if(cs.some(c=>c===undefined||banC(c)))return;if(seeds.some(s=>s.cs.length===cs.length&&s.cs.every(c=>cs.includes(c))))return;seeds.push({cs,why});};
   duos.slice(0,3).forEach(d=>addSeed(d.names,T('Starts from {a} + {b}, a pair on {k} {g}.',{a:esc(dn(d.names[0])),b:esc(dn(d.names[1])),k:d.n,g:topName})));
   proven.slice(0,3).forEach(x=>addSeed([x.n],T('Starts from {p}, on {k} of {n} {g} (×{x} vs the field).',{p:esc(dn(x.n)),k:x.k,n:NF,g:topName,x:x.lift.toFixed(1)})));
   if(ans[0])addSeed([Cx[ans[0].c].n],T('Starts from {p}, the best answer to what the top teams bring.',{p:esc(dn(Cx[ans[0].c].n))}));
@@ -2030,7 +2036,7 @@ function renderPL(){const el=$('plIn');if(!el)return;const R=plFiltered(),shown=
     <button class="link" id="plTickAll">${T('Tick all shown')}</button>${nsel?`<button class="link" id="plUntick">${T('Untick all')}</button>`:''}</div>
    <p class="lede" style="font-size:12px">${T('Buttons use the ticked Pokémon if any are ticked, otherwise everything in the list. The PvPoke import list pastes into PvPoke\'s custom group Import, or into this site\'s matrix groups.')}</p>
    <div class="tblwrap"><table class="vt pltbl"><thead><tr><th></th><th>${T('Pokémon')}</th><th>${T('PvPoke id')}</th><th class="r">${T('Dex')}</th><th>${T('Moveset')}</th><th class="r">${T('Regional teams')}</th><th class="r">${T('PvPoke rank')}</th><th>${T('Default IVs')}</th></tr></thead><tbody>
-   ${shown.map(r=>`<tr><td><input type="checkbox" data-pltick="${r.sid}"${PL.sel.has(r.sid)?' checked':''} aria-label="${esc(dn(r.n))}"></td><td>${monTag(r.n,r.sid)} ${typeBars(r.sid)}</td><td class="num"><code>${esc(r.sid)}</code></td><td class="r num">${r.dex}</td><td><small>${[r.f,...r.c].map(mvTag).join(' · ')}</small></td><td class="r num">${r.u||''}</td><td class="r num">${r.rank?'#'+r.rank:''}</td><td class="num"><small>${r.iv[1]}/${r.iv[2]}/${r.iv[3]} · ${T('Lvl')} ${r.iv[0]}</small></td></tr>`).join('')}</tbody></table></div>
+   ${shown.map(r=>`<tr><td><input type="checkbox" data-pltick="${r.sid}"${PL.sel.has(r.sid)?' checked':''} aria-label="${esc(dn(r.n))}"></td><td>${monTag(r.n,r.sid)}${banTag(r.sid,r.f,r.c)} ${typeBars(r.sid)}</td><td class="num"><code>${esc(r.sid)}</code></td><td class="r num">${r.dex}</td><td><small>${[r.f,...r.c].map(mvTag).join(' · ')}</small></td><td class="r num">${r.u||''}</td><td class="r num">${r.rank?'#'+r.rank:''}</td><td class="num"><small>${r.iv[1]}/${r.iv[2]}/${r.iv[3]} · ${T('Lvl')} ${r.iv[0]}</small></td></tr>`).join('')}</tbody></table></div>
    ${R.length>PL.show?`<div class="controls"><button class="btn ghost" id="plMore">${T('Show {n} more',{n:Math.min(200,R.length-PL.show)})}</button></div>`:''}`;}
 function plChosen(){const R=plFiltered();return PL.sel.size?R.filter(r=>PL.sel.has(r.sid)).concat(plRows().filter(r=>PL.sel.has(r.sid)&&!R.some(x=>x.sid===r.sid))):R;}
 function plCopy(txt){(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast(T('Copied')),()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast(T('Copied'));}catch(e){}ta.remove();});}

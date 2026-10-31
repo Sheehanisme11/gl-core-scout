@@ -1062,4 +1062,9 @@ KO = {
 "Advice for your team": "내 팀을 위한 조언",
 "Loaded into Team Building": "팀 빌딩에 불러왔습니다",
 "Team Building updated": "팀 빌딩을 업데이트했습니다",
+"Banned in Play! Pokémon Championship Series events": "Play! Pokémon 챔피언십 시리즈 대회에서 사용 금지",
+"Banned": "금지",
+"Not allowed at Play! Pokémon events (banned list):": "Play! Pokémon 대회에서 사용할 수 없음(금지 목록):",
+"Advice and suggestions leave out Pokémon on the Play! Pokémon banned list:": "조언과 추천에서는 Play! Pokémon 금지 목록의 포켓몬을 제외합니다:",
+"Official list": "공식 목록",
 }

@@ -983,4 +983,10 @@ D += [
 ("Advice for your team","Consejos para tu equipo","あなたのパーティへのアドバイス"),
 ("Loaded into Team Building","Cargado en Creación de equipos","パーティ構築に読み込みました"),
 ("Team Building updated","Creación de equipos actualizada","パーティ構築を更新しました"),
+# banned list
+("Banned in Play! Pokémon Championship Series events","Prohibido en los eventos del Play! Pokémon Championship Series","Play! Pokémonチャンピオンシップシリーズの大会では使用禁止"),
+("Banned","Prohibido","使用禁止"),
+("Not allowed at Play! Pokémon events (banned list):","No permitido en eventos Play! Pokémon (lista de prohibidos):","Play! Pokémonの大会では使えません（禁止リスト）："),
+("Advice and suggestions leave out Pokémon on the Play! Pokémon banned list:","Los consejos y sugerencias excluyen a los Pokémon de la lista de prohibidos de Play! Pokémon:","アドバイスと提案では、Play! Pokémonの禁止リストにあるポケモンを除外しています："),
+("Official list","Lista oficial","公式リスト"),
 ]

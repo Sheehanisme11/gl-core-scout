@@ -41,5 +41,33 @@
     }
   ],
   "anti_meta_net_cutoff": -0.2,
-  "gbl_top": 300
+  "gbl_top": 300,
+  "banned_source": "https://www.pokemon.com/us/play-pokemon/about/play-pokemon-pokemon-go-championship-series-banned-pokemon-list",
+  "banned": [
+    {
+      "id": "minior*",
+      "name": "Minior (all forms)",
+      "added": "2026-10"
+    },
+    {
+      "id": "ponyta_shadow",
+      "name": "Ponyta (Shadow)",
+      "added": "2026-01"
+    },
+    {
+      "id": "rapidash_shadow",
+      "name": "Rapidash (Shadow)",
+      "added": "2026-01"
+    },
+    {
+      "id": "kabuto_shadow",
+      "name": "Kabuto (Shadow)",
+      "added": "2026-01"
+    },
+    {
+      "id": "kabutops_shadow",
+      "name": "Kabutops (Shadow)",
+      "added": "2026-01"
+    }
+  ]
 }

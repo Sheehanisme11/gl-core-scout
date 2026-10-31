@@ -93,6 +93,8 @@ Meta cores · Trends · Team directory (all regional teams + analysis) · Core L
 
 ## Rules baked in
 
+- **Banned list**: `config.json` → `"banned"` holds the Play! Pokémon banned list (PvPoke speciesIds; `*` matches any ending, e.g. `minior*`; add `"fast": "ACID"` or `"charged": "PSYBEAM"` to ban only that move). Banned Pokémon are never suggested (Team Building, answers, anti-meta, Top teams advice), are tagged "Banned" in the Pokémon list, and Team Building warns if your six includes one. Regional data is left as played. Update it from https://www.pokemon.com/us/play-pokemon/about/play-pokemon-pokemon-go-championship-series-banned-pokemon-list
+
 - **Day 2** = placement ≤ `day2_cutoff` (9 at all 2027 events so far).
 - **Tiers** (rating 500 = tie): W ≥ 575, CW 501–574, CL 426–499, L ≤ 425. On the site the margin can be set to 50 / 75 / 100.
 - **Answers** avoid clear losses first, then close losses. "Answers from the meta" = Pokémon on 3+ regional teams; "Anti-meta" = fewer than 3.

@@ -988,12 +988,98 @@ function renderTP(){const el=$('tpOut');if(!el)return;const G=tpGroups(),NF=G.F.
     <div class="card"><h3 class="tph">${T('Patterns at a glance')}</h3><ul class="tplist">${pat.map(p=>`<li>${p}</li>`).join('')}</ul>
       <p class="why">${T('Small sample: {k} teams. Treat these as patterns worth testing, not rules.',{k:NF})}</p></div>
     <div class="card"><h3 class="tph">${T('What most top teams had in common')}</h3><p class="lede" style="font-size:13px;margin-bottom:8px">${T('Every pattern shared by at least 60% of the top teams, plus the Shadow, meta-pick, rare-pick and typing checks, with how common each one is across all teams. A pattern that is much more common on top teams than in the field is a stronger signal.')}</p>${bpH}</div>
+    <div class="tpadvh"><h2 class="tph" style="font-size:20px;margin:8px 0 0">${T('Advice: Pokémon and teams to try')}</h2></div><div id="tpAdv" style="display:grid;gap:16px"></div>
     <div class="card"><h3 class="tph">${T('Top teams vs the field')}</h3>${comp}</div>
     <div class="card"><h3 class="tph">${T('Pokémon on the top teams')}</h3><p class="lede" style="font-size:13px;margin-bottom:8px">${T('"vs the field" compares how often each Pokémon is on a top team with how often it is on any team: above ×1 means top teams used it more than everyone else.')}</p>${monH}</div>
     <div class="cols"><div class="card"><h3 class="tph">${T('Pairs on 2+ top teams')}</h3>${comboH(duos,T('No pair repeats yet.'))}</div><div class="card"><h3 class="tph">${T('Trios on 2+ top teams')}</h3>${comboH(trios,T('No trio repeats yet.'))}</div></div>
     <div class="card"><h3 class="tph">${T('Typing')}</h3>${tyH}</div>
     <h3 class="tph" style="margin:6px 0 0">${T('The teams, event by event')}</h3>${evH}`;
-  tpProg();}
+  tpProg();if(battleTop){if(TPA&&TPA.key===tpaKey())renderAdv();else setTimeout(tpaRun,30);}else renderAdv();}
+// ---------- TOP TEAMS ADVICE: Pokémon and full teams that follow the top-team patterns
+// Every team idea is built from precomputed PvPoke-engine results (candidates vs the regional meta), so nothing is
+// battled live. Score = the site's team score (core coverage, wins vs top meta, shared weaknesses)
+// + how many top-team patterns it meets + how much of what the top teams bring it beats.
+let TPA=null,TPAJOB=0;
+const tpaKey=()=>[TP.top,SH,MARGIN,ANTICUT].join('|');
+function tpaPool(nAnti){const L=[];for(let c=0;c<NC;c++)if(okCommon(c))L.push(c);
+  const anti=[];for(let c=0;c<NC;c++)if(okAnti(c))anti.push(c);anti.sort((a,b)=>(NETS[b]??-9)-(NETS[a]??-9));return L.concat(anti.slice(0,nAnti==null?60:nAnti));}
+const tpaUnit=c=>Object.assign(unitOfCand(c),{sid:Cx[c].sid,mv:[Cx[c].f,...Cx[c].c]});
+const tpaRec=cs=>['','',0,0,cs.map(c=>[Cx[c].n,Cx[c].sid,Cx[c].f,Cx[c].c])];
+// what the top teams bring: each Pokémon weighted by how many top teams had it
+function tpaTargets(G){const w=new Map();G.F.forEach(i=>new Set(tpMons(DATA.T[i]).map(m=>m[0])).forEach(n=>{const m=metaIdx[n];if(m!==undefined)w.set(m,(w.get(m)||0)+1);}));return [...w.entries()].map(([m,k])=>({m,k}));}
+function tpaBeat(units,tg){let s=0,s2=0,t=0;const miss=[];for(const x of tg){let b=0,n=0;for(const u of units){const v=TW[tier(u.r(x.m))];if(v>b)b=v;if(v>=.75)n++;}t+=x.k;if(b>=.75)s+=x.k;else miss.push(x);if(n>=2)s2+=x.k;}return {v:t?s/t:0,v2:t?s2/t:0,miss};}
+function tpaScore(cs,ctx){const units=cs.map(ctx.U),e=teamEval(units),c=tpCompT(tpaRec(cs));const met=ctx.rows.filter(r=>r.cond(c,()=>e));const b=tpaBeat(units,ctx.tg);
+  const top=cs.reduce((s,x)=>s+Math.min(2,ctx.fk.get(Cx[x].n)||0),0);// a nudge toward Pokémon the top teams actually used
+  const rep=ctx.used?cs.reduce((s,x)=>s+(ctx.used.get(x)||0),0):0;// a small push toward variety between ideas
+  return {s:e.score+60*met.length/Math.max(1,ctx.rows.length)+30*b.v+30*b.v2+5*top-3*rep,e,met,b,c};}
+const tpaSame=(cs,c)=>cs.some(x=>baseSp(Cx[x].n)===baseSp(Cx[c].n));
+async function tpaFill(seed,ctx,alive){let cs=seed.slice();while(cs.length<6){let best=null;
+    for(const c of ctx.pool){if(tpaSame(cs,c))continue;const sc=tpaScore([...cs,c],ctx);if(!best||sc.s>best.s)best={c,s:sc.s};}
+    if(!best)break;cs.push(best.c);await new Promise(r=>setTimeout(r,0));if(!alive())return null;}
+  return cs;}
+async function tpaRun(){const key=tpaKey();if(TPA&&TPA.key===key)return;const job=++TPAJOB,alive=()=>job===TPAJOB&&cur==='final';
+  const G=tpGroups(),rows=tpBlueprint(G,true).filter(r=>r.f>=0.6),tg=tpaTargets(G),pool=tpaPool(),UC=new Map();
+  const fk=new Map();G.F.forEach(i=>new Set(tpMons(DATA.T[i]).map(m=>m[0])).forEach(n=>fk.set(n,(fk.get(n)||0)+1)));
+  const ctx={rows,tg,pool:tpaPool(25),fk,used:new Map(),U:c=>{if(!UC.has(c))UC.set(c,tpaUnit(c));return UC.get(c);}};
+  const mons=tpMonRows(G),duos=tpCombos(G,2),NF=G.F.length;const topName=TP.top===2?T('top-2 teams'):T('top-{n} teams',{n:TP.top});
+  // Pokémon lists
+  const proven=mons.filter(x=>x.k>=2&&x.lift>=1.4&&candIdx[x.n]!==undefined).slice(0,8);
+  const P=prTable(),metaAvg=c=>{let s=0,t=0;for(let m=0;m<NM;m++){s+=P[c*NM+m]*Mx[m].u;t+=Mx[m].u;}return s/t;};
+  const vsTop=pool.map(c=>{const u=ctx.U(c),b=tpaBeat([u],tg);return {c,v:b.v,beat:tg.filter(x=>TW[tier(u.r(x.m))]>=.75).sort((a,b)=>b.k-a.k),avg:metaAvg(c)};});
+  const answers=vsTop.filter(x=>x.avg>=480).sort((a,b)=>b.v-a.v||b.avg-a.avg);const seenA=new Set(),ans=[];for(const x of answers){const b=baseSp(Cx[x.c].n);if(seenA.has(b))continue;seenA.add(b);ans.push(x);if(ans.length>=8)break;}
+  const favT=TYPES.filter(t=>tpShare(G.F,i=>tpComp(i).types.has(t))>=0.6);
+  const sleep=vsTop.filter(x=>(TPCNT[Cx[x.c].n]||0)/NT<0.03&&typesOf(Cx[x.c].sid).some(t=>favT.includes(t))).sort((a,b)=>(b.avg+300*b.v)-(a.avg+300*a.v));const seenS=new Set(),sl=[];for(const x of sleep){const b=baseSp(Cx[x.c].n);if(seenS.has(b)||ans.some(y=>y.c===x.c))continue;seenS.add(b);sl.push(x);if(sl.length>=8)break;}
+  // seeds for team ideas: repeated pairs, then proven singles, then the best answer to the top teams
+  const seeds=[];const addSeed=(names,why)=>{const cs=names.map(n=>candIdx[n]);if(cs.some(c=>c===undefined))return;if(seeds.some(s=>s.cs.length===cs.length&&s.cs.every(c=>cs.includes(c))))return;seeds.push({cs,why});};
+  duos.slice(0,3).forEach(d=>addSeed(d.names,T('Starts from {a} + {b}, a pair on {k} {g}.',{a:esc(dn(d.names[0])),b:esc(dn(d.names[1])),k:d.n,g:topName})));
+  proven.slice(0,3).forEach(x=>addSeed([x.n],T('Starts from {p}, on {k} of {n} {g} (×{x} vs the field).',{p:esc(dn(x.n)),k:x.k,n:NF,g:topName,x:x.lift.toFixed(1)})));
+  if(ans[0])addSeed([Cx[ans[0].c].n],T('Starts from {p}, the best answer to what the top teams bring.',{p:esc(dn(Cx[ans[0].c].n))}));
+  const ideas=[];TPA={key,busy:true,done:0,total:Math.min(7,seeds.length),ideas,proven,ans,sl,rows,G,topName,favT};renderAdv();
+  for(const sd of seeds.slice(0,7)){const cs=await tpaFill(sd.cs,ctx,alive);if(!cs){if(TPA&&TPA.key===key)TPA=null;return;}
+    const key2=cs.slice().sort().join(',');cs.forEach(c=>{if(!sd.cs.includes(c))ctx.used.set(c,(ctx.used.get(c)||0)+1);});if(!ideas.some(x=>x.key2===key2)){const u0=ctx.used;ctx.used=null;const sc=tpaScore(cs,ctx);ctx.used=u0;
+      const adds=cs.filter(c=>!sd.cs.includes(c)).map(c=>{const u=ctx.U(c);const others=cs.filter(x=>x!==c).map(ctx.U);const only=tg.filter(x=>TW[tier(u.r(x.m))]>=.75&&!others.some(o=>TW[tier(o.r(x.m))]>=.75)).sort((a,b)=>b.k-a.k);return {c,only};});
+      ideas.push({cs,key2,why:sd.why,sc,adds});}
+    TPA.done++;renderAdv();}
+  ideas.sort((a,b)=>b.sc.s-a.sc.s);TPA.busy=false;renderAdv();}
+// swaps for the player's Team Building six that move it toward the top-team patterns
+function tpaMine(){if(!TPA||TPA.busy)return '';const s=team.filter(Boolean);if(s.length<3)return `<p class="why">${T('Add at least three Pokémon in Team Building to get advice for your own team.')}</p>`;
+  const units=s.map(unitOfSlot),rows=TPA.rows,tg=tpaTargets(TPA.G);
+  const sc=us=>{const e=teamEval(us),c=tpCompT(['','',0,0,us.map(u=>[u.name,u.sid,u.mv[0],u.mv.slice(1)])]);const met=rows.filter(r=>r.cond(c,()=>e));const b=tpaBeat(us,tg);return {s:e.score+60*met.length/Math.max(1,rows.length)+30*b.v+30*b.v2,e,met,b};};
+  const base=sc(units),pool=tpaPool(25),out=[];
+  const have=new Set(units.map(u=>baseSp(u.name)));
+  if(units.length<6){for(const c of pool){if(have.has(baseSp(Cx[c].n)))continue;const r=sc([...units,tpaUnit(c)]);out.push({out:null,c,r});}}
+  else units.forEach((u,k)=>{for(const c of pool){const b=baseSp(Cx[c].n);if(have.has(b)&&b!==baseSp(u.name))continue;if(Cx[c].n===u.name)continue;const us=units.slice();us[k]=tpaUnit(c);out.push({out:u,c,r:sc(us)});}});
+  out.sort((a,b)=>b.r.s-a.r.s);const seen=new Set(),per=new Map(),best=[];for(const o of out){if(o.r.s<=base.s+0.5)break;const on=o.out?o.out.name:'',k=on+'|'+baseSp(Cx[o.c].n);if(seen.has(k)||(per.get(on)||0)>=2)continue;seen.add(k);per.set(on,(per.get(on)||0)+1);best.push(o);if(best.length>=5)break;}
+  const missing=rows.filter(r=>!base.met.includes(r));
+  return `<p class="why">${T('Your team meets {k} of {n} top-team patterns, beats {b} of what the top teams bring, and has 1+ answer to {c} of meta core teams.',{k:base.met.length,n:rows.length,b:pct(base.b.v),c:pct(base.e.c1)})}</p>
+   ${missing.length?`<p class="why">${T('Missing:')} ${missing.map(r=>r.label).join(' · ')}</p>`:''}
+   ${base.b.miss.length?`<p class="why">${T('Top-team Pokémon none of your six beats:')} ${base.b.miss.sort((a,b)=>b.k-a.k).slice(0,6).map(x=>monTag(Mx[x.m].n,Mx[x.m].sid)).join(' ')}</p>`:''}
+   ${best.length?`<div class="tblwrap" style="margin-top:8px"><table class="vt"><thead><tr><th>${T('Change')}</th><th class="r">${T('Patterns met')}</th><th class="r">${T('Beats top-team picks')}</th><th class="r">${T('Core teams with 1+ answer')}</th><th></th></tr></thead><tbody>
+    ${best.map(o=>`<tr><td><span class="core">${o.out?`${monTag(o.out.name,o.out.sid)} <span class="plus">→</span> `:`<span class="plus">+</span> `}${monTag(Cx[o.c].n,Cx[o.c].sid)}</span><div class="why">${[Cx[o.c].f,...Cx[o.c].c].map(m=>esc(mvName(m))).join(' · ')}</div></td>
+      <td class="r num">${base.met.length} → <b>${o.r.met.length}</b></td><td class="r num">${pct(base.b.v)} → <b>${pct(o.r.b.v)}</b></td><td class="r num">${pct(base.e.c1)} → <b>${pct(o.r.e.c1)}</b></td>
+      <td><button class="link" data-tpaswap="${o.out?esc(o.out.name):''}|${o.c}">${o.out?T('Make this swap'):T('Add')}</button></td></tr>`).join('')}</tbody></table></div>`:`<p class="why">${T('No single change improves your team on these measures.')}</p>`}`;}
+function renderAdv(){const el=$('tpAdv');if(!el)return;const A=TPA;
+  if(!A){el.innerHTML=`<p class="busy">${T('Waiting for the top teams\' battle numbers…')}</p>`;return;}
+  const NF=A.G.F.length,mv=c=>[Cx[c].f,...Cx[c].c].map(m=>esc(mvName(m))).join(' · ');
+  const idea=(x,k)=>`<div class="tpteam"><div class="sumline"><span class="status ok">${T('Idea {k}',{k:k+1})}</span> <span class="why">${x.why}</span></div>
+     <div class="tpmons">${x.cs.map(c=>`<div class="whoi">${monTag(Cx[c].n,Cx[c].sid)}<div class="why">${mv(c)}</div></div>`).join('')}</div>
+     <div class="sumline"><span class="tag">${T('Patterns met')} ${x.sc.met.length}/${A.rows.length}</span><span class="tag">${T('Beats top-team picks')} ${pct(x.sc.b.v)}</span><span class="tag">${T('1+ answer')} ${pct(x.sc.e.c1)}</span><span class="tag">${T('Wins vs top meta')} ${pct(x.sc.e.th)}</span><span class="tag">${T('Shadows')} ${x.sc.c.sh}</span>${x.sc.e.wr.v?`<span class="tag" style="color:var(--loss)">${T('Shared weaknesses')} ${x.sc.e.wr.v}</span>`:''}</div>
+     ${x.adds.filter(a=>a.only.length).length?`<p class="why">${x.adds.filter(a=>a.only.length).map(a=>T('{p} covers {list}',{p:`<b>${esc(dn(Cx[a.c].n))}</b>`,list:a.only.slice(0,3).map(t=>esc(dn(Mx[t.m].n))).join(', ')})).join(' · ')}</p>`:''}
+     ${x.sc.b.miss.length?`<p class="why">${T('Still loses to:')} ${x.sc.b.miss.sort((a,b)=>b.k-a.k).slice(0,4).map(t=>esc(dn(Mx[t.m].n))).join(', ')}</p>`:''}
+     <div class="controls"><button class="link" data-tpaload="${x.cs.join(',')}">${T('Load into Team Building')}</button><button class="link" data-tpalab="${x.cs.join(',')}">${T('Open in Pokémon Analysis')}</button></div></div>`;
+  const plist=(L,line)=>L.length?`<div class="tplist2">${L.map(line).join('')}</div>`:`<p class="empty">${T('Nothing stands out yet.')}</p>`;
+  el.innerHTML=`<div class="card"><h3 class="tph">${T('Team ideas built from these patterns')}</h3><p class="lede" style="font-size:13px;margin-bottom:8px">${T('Each idea starts from something the top teams kept bringing, then adds the Pokémon that best raise core coverage, meet more top-team patterns and beat more of what the top teams use. Movesets are the most used at the regionals, or PvPoke\'s for rarer picks. Use them as starting points to test, not finished teams.')}</p>
+     ${A.busy?`<p class="busy">${T('Building team ideas… {k} of {n}',{k:A.done,n:A.total})}</p>`:''}<div class="tpevg">${A.ideas.map(idea).join('')}</div></div>
+   <div class="cols">
+    <div class="card"><h3 class="tph">${T('Proven at the top')}</h3><p class="why" style="margin-bottom:8px">${T('On two or more {g} and more common there than in the field.',{g:A.topName})}</p>${plist(A.proven,x=>`<div class="tprow">${monTag(x.n,x.sid)} ${tpLift(x.lift)}<div class="why">${T('On {k} of {n} {g}.',{k:x.k,n:NF,g:A.topName})} ${T('Top teams ran:')} ${x.topMv.filter(Boolean).map(m=>esc(mvName(m))).join(' · ')}</div></div>`)}</div>
+    <div class="card"><h3 class="tph">${T('Answers to the top teams')}</h3><p class="why" style="margin-bottom:8px">${T('If players copy what reached the top, these beat the most of it while holding up against the wider meta.')}</p>${plist(A.ans,x=>`<div class="tprow">${monTag(Cx[x.c].n,Cx[x.c].sid)} <b class="num">${pct(x.v)}</b><div class="why">${mv(x.c)} · ${T('Beats:')} ${x.beat.slice(0,4).map(t=>esc(dn(Mx[t.m].n))).join(', ')}</div></div>`)}</div>
+    <div class="card"><h3 class="tph">${T('Sleepers')}</h3><p class="why" style="margin-bottom:8px">${T('On fewer than 3% of teams, but they share a type most top teams carried ({types}) and do well against the meta.',{types:A.favT.map(tn).join(', ')})}</p>${plist(A.sl,x=>`<div class="tprow">${monTag(Cx[x.c].n,Cx[x.c].sid)} <span class="num" style="color:var(--muted)">${T('{k} teams',{k:TPCNT[Cx[x.c].n]||0})}</span><div class="why">${mv(x.c)} · ${T('Beats {p} of top-team picks',{p:pct(x.v)})}</div></div>`)}</div>
+   </div>
+   <div class="card"><h3 class="tph">${T('Advice for your team')}</h3>${tpaMine()}</div>`;}
+document.addEventListener('click',e=>{const l=e.target.closest('[data-tpaload]');if(l){const cs=l.dataset.tpaload.split(',').map(Number);team=[0,1,2,3,4,5].map(k=>{const c=cs[k];return c!==undefined?mkSlot({name:Cx[c].n,f:Cx[c].f,c:Cx[c].c.slice()}):null;});saveTeam();go('team');window.scrollTo({top:0});toast(T('Loaded into Team Building'));return;}
+  const b=e.target.closest('[data-tpalab]');if(b){const cs=b.dataset.tpalab.split(',').map(Number);lab=cs.map(c=>mkSlot({name:Cx[c].n,f:Cx[c].f,c:Cx[c].c.slice()})).filter(Boolean);saveLab();go('lab');window.scrollTo({top:0});return;}
+  const s=e.target.closest('[data-tpaswap]');if(s){const [outN,c]=s.dataset.tpaswap.split('|');const slot=mkSlot({name:Cx[+c].n,f:Cx[+c].f,c:Cx[+c].c.slice()});
+    let k=outN?team.findIndex(x=>x&&x.name===outN):team.findIndex(x=>!x);if(k<0)k=team.length<6?team.length:-1;if(k<0||!slot)return;team[k]=slot;saveTeam();renderAdv();toast(T('Team Building updated'));}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-tptop]');if(b){TP.top=+b.dataset.tptop;tpSave();renderTP();return;}
   const a=e.target.closest('[data-tpan]');if(a){const t=DATA.T[+a.dataset.tpan];TD.ev=t[0];TD.q=t[2];TD.d2=false;$('tdEv').value=t[0];$('tdQ').value=t[2];$('tdD2').checked=false;go('teams');window.scrollTo({top:0});
     setTimeout(()=>{const h=document.querySelector('#v-teams button.tdhead');if(h)h.click();},50);}});

@@ -958,8 +958,27 @@ function trendList(dir){const last=EVN.length-1,earlyN=EVT.slice(0,last).reduce(
   Mx.forEach(m=>{const idx=teamsWith([m.n]);if(idx.length<5)return;const be=byEvent(idx);const delta=be[last][0]/EVT[last]-be.slice(0,last).reduce((s,x)=>s+x[0],0)/earlyN;
     if(dir>0?delta>=0:delta<=0)out.push({sid:m.sid,f:m.f,c:m.c,w:idx.length,delta});});
   return out.sort((a,b)=>dir>0?b.delta-a.delta:a.delta-b.delta);}
+// --- the player's own saved lists: kept in this browser only (localStorage), never sent anywhere
+let MYL=[];try{const o=JSON.parse(localStorage.getItem('gl_lists')||'[]');if(Array.isArray(o))MYL=o.filter(l=>l&&l.id&&typeof l.name==='string'&&Array.isArray(l.items));}catch(e){}
+MYL.forEach(l=>{l.items=l.items.filter(x=>x&&SP[x.sid]);});
+function mylStore(){try{localStorage.setItem('gl_lists',JSON.stringify(MYL));return true;}catch(e){toast(T('Could not save: this browser is blocking site storage.'));return false;}}
+const mylItem=e=>({sid:e.sid,f:e.f,c:(e.c||[]).filter(Boolean).slice(0,2),iv:e.iv?e.iv.slice():null,lv:e.lv!=null?e.lv:null});
+const mylName=(q,def)=>{const v=prompt(q,def||'');return v==null?null:v.trim().slice(0,60);};
+function mylSaveAs(items,def){if(!items.length){toast(T('That list is empty.'));return;}
+  const name=mylName(T('Name for this list'),def);if(!name)return;
+  const ex=MYL.find(l=>l.name.toLowerCase()===name.toLowerCase());
+  if(ex){if(!confirm(T('Replace your saved list "{n}"?',{n:ex.name})))return;ex.items=items.slice(0,MXMAX).map(mylItem);ex.t=Date.now();}
+  else MYL.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name,items:items.slice(0,MXMAX).map(mylItem),t:Date.now()});
+  if(mylStore()){toast(T('Saved "{n}" ({k} Pokémon)',{n:name,k:Math.min(items.length,MXMAX)}));mylChanged();}}
+function mylChanged(){if($('mxgA')&&MX){renderGroup('A');renderGroup('B');renderMyLists();}if(typeof renderIVs==='function'&&$('ivIn')&&$('ivIn').innerHTML)renderIVs();}
+function renderMyLists(){const el=$('mxMy');if(!el)return;
+  el.innerHTML=`<details class="mximp"${MYL.length?' open':''}><summary>${T('My saved lists')} (${MYL.length})</summary>
+   <p class="lede" style="font-size:12px;margin:6px 0">${T('Your own lists, saved in this browser on this device. Nobody else can see them. They appear under "My saved lists" in every "Fill with" menu. Use "Save as my list" under a group to add one; to move a list to another device, copy it and paste it into a group\'s Import there.')}</p>
+   ${MYL.length?`<div class="mylist">${MYL.map(l=>`<div class="myrow"><b class="mynm">${esc(l.name)}</b><span class="num mysub">${T('{n} Pokémon',{n:l.items.length})}</span>
+     <span class="mybtns"><button class="link" data-myfill="A:${esc(l.id)}">${T('Fill Group A')}</button><button class="link" data-myfill="B:${esc(l.id)}">${T('Fill Group B')}</button><button class="link" data-mycopy="${esc(l.id)}">${T('Copy (PvPoke format)')}</button><button class="link" data-myren="${esc(l.id)}">${T('Rename')}</button><button class="link" data-mydel="${esc(l.id)}">${T('Delete')}</button></span></div>`).join('')}</div>`:`<p class="empty">${T('No saved lists yet. Build a group, then tap "Save as my list" under it.')}</p>`}</details>`;}
 const PRESET_CACHE=new Map();
-function presetData(k){if(PRESET_CACHE.has(k)&&!['anti','team'].includes(k))return PRESET_CACHE.get(k);let L=[];
+function presetData(k){if(k.startsWith('my:')){const l=MYL.find(x=>x.id===k.slice(3));return l?l.items.slice(0,MXMAX).map(x=>({sid:x.sid,f:x.f,c:x.c,w:1})):[];}
+  if(PRESET_CACHE.has(k)&&!['anti','team'].includes(k))return PRESET_CACHE.get(k);let L=[];
   if(k==='meta10')L=Mx.filter(m=>m.u/NT>0.10).sort((a,b)=>b.u-a.u).map(m=>({sid:m.sid,f:m.f,c:m.c,w:m.u}));
   else if(k==='d2all')L=teamList(t=>t[3]);
   else if(k.startsWith('ev:')){const e=k.slice(3);L=teamList(t=>t[0]===e);}
@@ -970,7 +989,8 @@ function presetData(k){if(PRESET_CACHE.has(k)&&!['anti','team'].includes(k))retu
   else if(k==='anti')L=[...Array(NC).keys()].filter(okAnti).sort((a,b)=>NETS[b]-NETS[a]).map(c=>({sid:Cx[c].sid,f:Cx[c].f,c:Cx[c].c,w:1}));
   else if(k==='team')L=team.filter(Boolean).map(s=>({sid:s.sid,f:s.f,c:s.c,w:1}));
   L=L.slice(0,MXMAX);PRESET_CACHE.set(k,L);return L;}
-function presetList(k){return presetData(k).map(x=>mkEntry(x.sid,{f:x.f,c:x.c}));}
+function presetList(k){if(k.startsWith('my:')){const l=MYL.find(x=>x.id===k.slice(3));return l?l.items.slice(0,MXMAX).map(x=>mkEntry(x.sid,{f:x.f,c:x.c,iv:x.iv&&x.iv.slice(),lv:x.iv?x.lv:null})):[];}
+  return presetData(k).map(x=>mkEntry(x.sid,{f:x.f,c:x.c}));}
 // groups of lists for the menus, with live counts
 function presetGroups(){const n=k=>presetData(k).length;
   return [[T('Regional meta'),[['meta10',T('Regional meta: on 10%+ of teams (Day 1)')],['reg25',T('Regional meta: top 25')],['reg50',T('Regional meta: top 50')],['reg100',T('Regional meta: top 100')],['regall',T('Regional meta: all')]]],
@@ -979,7 +999,8 @@ function presetGroups(){const n=k=>presetData(k).length;
     [T('Each regional, Day 2'),EVN.map(e=>['evd2:'+e,T('{e} Day 2',{e})])],
     [T('Trends'),[['rise',T('Trending up (includes 0%)')],['fall',T('Trending down (includes 0%)')]]],
     [T('Anti-meta and ladder'),[['anti',T('Anti-meta pool (your setting)')],['pv50',T('PvPoke Great League rankings: top 50')],['pv100',T('PvPoke Great League rankings: top 100')],['pv200',T('PvPoke Great League rankings: top 200')],['pv300',T('PvPoke Great League rankings: top 300')],['pv500',T('PvPoke Great League rankings: top 500')]]],
-    [T('Yours'),[['team',T('My team (Team Building)')]]]].map(([g,opts])=>[g,opts.map(([k,l])=>[k,l,n(k)])]);}
+    [T('Yours'),[['team',T('My team (Team Building)')]]],
+    [T('My saved lists'),MYL.map(l=>['my:'+l.id,l.name])]].map(([g,opts])=>[g,opts.map(([k,l])=>[k,l,n(k)])]);}
 function presetOptions(sel,skip){skip=skip||[];return presetGroups().map(([g,opts])=>{const o=opts.filter(x=>!skip.includes(x[0]));return o.length?`<optgroup label="${esc(g)}">${o.map(([k,l,c])=>`<option value="${esc(k)}"${k===sel?' selected':''}>${esc(l)} (${c})</option>`).join('')}</optgroup>`:'';}).join('');}
 // --- group editor
 function moveSel(sid,kind,sel,attr){const p=SP[sid];const pool=kind==='f'?p.f:p.c;const all=[...new Set([...pool,sel].filter(Boolean))];
@@ -1000,7 +1021,7 @@ function renderGroup(g){const el=$('mxg'+g);if(!el)return;const G=MX[g],other=g=
     <textarea rows="6" data-imptxt="${g}" spellcheck="false" placeholder="melmetal,THUNDER_SHOCK,DOUBLE_IRON_BASH,DYNAMIC_PUNCH&#10;sableye_shadow&#10;Azumarill">${esc(exportList(G))}</textarea>
     <div class="controls"><button class="btn" data-imp="${g}" data-mode="replace">${T('Replace group')}</button><button class="btn ghost" data-imp="${g}" data-mode="add">${T('Add to group')}</button><button class="link" data-copy="${g}">${T('Copy to clipboard')}</button><button class="link" data-dlist="${g}">${T('Download list for Excel')}</button></div></details>
    <div class="mxlist">${G.length?G.map((e,i)=>`<div class="mxrow${MX.open[g]===i?' open':''}"><div class="mxr1">${badge(eName(e),e.sid)}<span class="mxnm">${esc(dn(eName(e)))}</span><span class="mxsub">${entryLine(e)}</span><button class="link" data-edit="${g}:${i}">${MX.open[g]===i?T('Done'):T('Edit')}</button><button class="mxx" data-del="${g}:${i}" aria-label="${esc(T('Remove'))} ${esc(dn(eName(e)))}">×</button></div>${MX.open[g]===i?entryEditor(g,i,e):''}</div>`).join(''):`<p class="empty">${T('Empty. Choose a list above, add Pokémon, or import.')}</p>`}</div>
-   <div class="controls">${G.length?`<button class="link" data-clear="${g}">${T('Clear')}</button>`:''}<button class="link" data-copyto="${g}">${T('Copy to Group {o}',{o:other})}</button></div>`;}
+   <div class="controls">${G.length?`<button class="link" data-clear="${g}">${T('Clear')}</button>`:''}<button class="link" data-copyto="${g}">${T('Copy to Group {o}',{o:other})}</button>${G.length?`<button class="link" data-mysave="${g}">${T('Save as my list')}</button>`:''}</div>`;}
 function renderRun(){const el=$('mxRun');if(!el)return;const n=MX.A.length*MX.B.length;
   const sh=(k,v)=>`<div class="seg" role="group" aria-label="${esc(T('Shields'))} ${k}">${[0,1,2].map(s=>`<button data-sh="${k}:${s}" aria-pressed="${v===s}">${s}</button>`).join('')}</div>`;
   el.innerHTML=`<div class="mxctl"><label class="fld">${T('Group A shields')} ${sh('A',MX.sa)}</label><label class="fld">${T('Group B shields')} ${sh('B',MX.sb)}</label>
@@ -1012,7 +1033,7 @@ function renderRun(){const el=$('mxRun');if(!el)return;const n=MX.A.length*MX.B.
 // first visit: start with something worth running
 let MXFIRST=(()=>{try{return !localStorage.getItem('gl_mx');}catch(e){return false;}})();
 function renderMatrix(){if(MXFIRST&&!MX.A.length&&!MX.B.length){MXFIRST=false;MX.A=presetList('meta10');MX.B=presetList('d2all');mxSave();}
-  renderGroup('A');renderGroup('B');renderRun();if(MXRES)renderResults();}
+  renderGroup('A');renderGroup('B');renderMyLists();renderRun();if(MXRES)renderResults();}
 function setIV(e,mode){if(mode==='def'){e.iv=null;e.lv=null;}else if(mode==='r1'){e.iv=rank1(e.sid,MX.cap).slice();e.lv=null;}else if(mode==='max'){e.iv=[15,15,15];e.lv=null;}}
 function mxChanged(g){MX.opt=null;mxSave();renderGroup(g);renderRun();}
 function addTo(g,list,replace){let G=replace?[]:MX[g].slice();const room=MXMAX-G.length;if(list.length>room)toast(T('Groups hold up to {n}; {k} were left out.',{n:MXMAX,k:list.length-room}));G=G.concat(list.slice(0,Math.max(0,room)));MX[g]=G;MX.open[g]=-1;mxChanged(g);}
@@ -1032,6 +1053,11 @@ MXEL.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)retur
   if(d.del){const [g,i]=d.del.split(':');MX[g].splice(+i,1);MX.open[g]=-1;mxChanged(g);return;}
   if(d.edit){const [g,i]=d.edit.split(':');MX.open[g]=MX.open[g]===+i?-1:+i;renderGroup(g);return;}
   if(d.ivset){const ed=b.closest('.mxed'),g=ed.dataset.g;setIV(MX[g][+ed.dataset.i],d.ivset);mxChanged(g);return;}
+  if(d.mysave){mylSaveAs(MX[d.mysave],T('Group {g}',{g:d.mysave})+' '+new Date().toLocaleDateString());return;}
+  if(d.myfill){const [g,id]=d.myfill.split(':');const L=presetList('my:'+id);if(!L.length){toast(T('That list is empty.'));return;}addTo(g,L,true);toast(T('Group {g}: {n} Pokémon',{g,n:MX[g].length}));return;}
+  if(d.mycopy){const l=MYL.find(x=>x.id===d.mycopy);if(!l)return;const txt=exportList(presetList('my:'+l.id));(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast(T('Copied')),()=>{prompt(T('Copy this text'),txt);});return;}
+  if(d.myren){const l=MYL.find(x=>x.id===d.myren);if(!l)return;const n=mylName(T('New name'),l.name);if(!n)return;if(MYL.some(x=>x!==l&&x.name.toLowerCase()===n.toLowerCase())){toast(T('You already have a list called "{n}".',{n}));return;}l.name=n;if(mylStore())mylChanged();return;}
+  if(d.mydel){const l=MYL.find(x=>x.id===d.mydel);if(!l)return;if(!confirm(T('Delete your saved list "{n}"?',{n:l.name})))return;MYL=MYL.filter(x=>x!==l);if(mylStore()){mylChanged();toast(T('Deleted'));}return;}
   if(d.clear){MX[d.clear]=[];MX.open[d.clear]=-1;mxChanged(d.clear);return;}
   if(d.copyto){const g=d.copyto,o=g==='A'?'B':'A';MX[o]=MX[g].map(x=>Object.assign({},x,{c:x.c.slice(),iv:x.iv&&x.iv.slice()}));mxChanged(o);toast(T('Copied to Group {o}',{o}));return;}
   if(d.imp){const g=d.imp,r=parseList(MXEL.querySelector(`[data-imptxt="${g}"]`).value);if(!r.out.length){toast(T('Nothing recognised to import.'));return;}addTo(g,r.out,d.mode==='replace');
@@ -1766,7 +1792,7 @@ function renderPL(){const el=$('plIn');if(!el)return;const R=plFiltered(),shown=
     <label class="fld">${T('Sort')} <select id="plSort"><option value="rank"${PL.sort==='rank'?' selected':''}>${T('PvPoke rank')}</option><option value="use"${PL.sort==='use'?' selected':''}>${T('Regional teams')}</option><option value="name"${PL.sort==='name'?' selected':''}>${T('Name')}</option><option value="dex"${PL.sort==='dex'?' selected':''}>${T('Pokédex number')}</option></select></label></div>
    <div class="controls"><span class="num mxshown">${T('{a} Pokémon · {b} ticked',{a:R.length,b:nsel})}</span>
     <button class="btn" id="plDl">${T('Download for Excel')}</button><button class="btn ghost" id="plCopy">${T('Copy PvPoke import list')}</button><button class="btn ghost" id="plNames">${T('Copy names')}</button>
-    <button class="btn ghost" data-plto="A">${T('Send to matrix Group A')}</button><button class="btn ghost" data-plto="B">${T('Send to matrix Group B')}</button>
+    <button class="btn ghost" data-plto="A">${T('Send to matrix Group A')}</button><button class="btn ghost" data-plto="B">${T('Send to matrix Group B')}</button><button class="btn ghost" id="plSave">${T('Save as my list')}</button>
     <button class="link" id="plTickAll">${T('Tick all shown')}</button>${nsel?`<button class="link" id="plUntick">${T('Untick all')}</button>`:''}</div>
    <p class="lede" style="font-size:12px">${T('Buttons use the ticked Pokémon if any are ticked, otherwise everything in the list. The PvPoke import list pastes into PvPoke\'s custom group Import, or into this site\'s matrix groups.')}</p>
    <div class="tblwrap"><table class="vt pltbl"><thead><tr><th></th><th>${T('Pokémon')}</th><th>${T('PvPoke id')}</th><th class="r">${T('Dex')}</th><th>${T('Moveset')}</th><th class="r">${T('Regional teams')}</th><th class="r">${T('PvPoke rank')}</th><th>${T('Default IVs')}</th></tr></thead><tbody>
@@ -1783,6 +1809,7 @@ PLEL.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)retur
   if(b.id==='plMore'){PL.show+=200;renderPL();return;}
   if(b.id==='plTickAll'){plFiltered().slice(0,PL.show).forEach(r=>PL.sel.add(r.sid));renderPL();return;}
   if(b.id==='plUntick'){PL.sel.clear();renderPL();return;}
+  if(b.id==='plSave'){mylSaveAs(plChosen().map(r=>mkEntry(r.sid,{f:r.f,c:r.c})),'');return;}
   if(b.id==='plDl'){download('pokemon-list.csv',plCSV(plChosen()));return;}
   if(b.id==='plCopy'){plCopy(plChosen().map(plLine).join('\n'));return;}
   if(b.id==='plNames'){plCopy(plChosen().map(r=>dn(r.n)).join('\n'));return;}
